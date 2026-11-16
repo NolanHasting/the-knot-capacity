@@ -1,4 +1,4 @@
-# Knot Capacity
+# The Knot Capacity
 
 Independent live crowd tracker for The Knot Climbing Gym in Gainesville, Florida.
 
