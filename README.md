@@ -78,8 +78,18 @@ Historical backup branches are kept under `backup/`. For data backups, use the m
 
 ## Search indexing
 
-The single public indexable page is `https://climbtheknot.live/`. Its XML sitemap is at `https://climbtheknot.live/sitemap.xml` and is linked from `/robots.txt`. A sitemap lists URLs for crawlers; it is not a duplicate of the webpage. Submit the full sitemap URL in Google Search Console for the custom domain. The XSL stylesheet only makes the XML more readable in browsers.
+The main public indexable page is `https://climbtheknot.live/`. Its XML sitemap is at `https://climbtheknot.live/sitemap.xml` and is linked from `/robots.txt`. The widget guide is at `/widgets.html` and is also indexed. A sitemap lists URLs for crawlers; it is not a duplicate of the webpage. Submit the full sitemap URL in Google Search Console for the custom domain. The XSL stylesheet only makes the XML more readable in browsers.
 
 ## Disclaimer
 
 Knot Capacity is an independent project, not owned or endorsed by The Knot Climbing Gym. Live count and historical reports come from the gym's public capacity feed. No guarantee of actual headcount, future capacity, opening hours or admission is made.
+
+## Member experience and feedback
+
+The visit planner ranks full 60/90/120-minute sessions using the current forecast and upper-range peaks, with a 30-minute closing buffer. It does not recommend stale forecasts. The live reported count remains authoritative as a source reading, not an exact headcount; inferred recount and experimental occupancy estimate are separate.
+
+POST /api/feedback accepts anonymous crowd reports and suggestions. It uses a random browser token with a 10-minute per-token cooldown and 200 accepted submissions per Eastern day. These are cost controls, not proof of identity or presence. Browser tokens can be reset; origin checks are not authentication. Review abuse and configure stronger bot protection before broad promotion.
+
+Firestore remains deny-all to clients. Administrators can review memberFeedback and feedbackContacts separately in Firebase Console. Never publish contact details or use them to train models. Reports are preliminary, not verified labels; compare with nearby inferred recounts, aggregate independent reports, and backtest before fitting a new model. No automatic notification or marketing messages are sent. Delete contact details after follow-up and periodically purge old feedbackLimits records; set a defined retention policy before public launch.
+
+The existing forecast algorithm is unchanged to preserve historical evaluation. The extra nowcast is experimental and gated on at least five learned departure-rate observations and a same-day recount within one hour. Do not conflate this with verified staff counts.
