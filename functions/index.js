@@ -10,6 +10,8 @@ const R=require('./recounts');
 const A=require('./analytics');
 const S=require('./seasonal');
 const {health}=require('./health');
+const F=require('./feedback');
+const {createHash}=require('node:crypto');
 initializeApp();
 const db=getFirestore();
 const REGION='us-east1';
@@ -110,6 +112,15 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
   const activeVersion=response.forecast?.modelVersion||'v3-recount-provisional';
   response.forecastAccuracy=scored?.model===activeVersion?scored:null;
   response.recounts=R.groupDrops(response.todayHistory||[]);
+  // Only expose a same-day inferred recount, never treat it as a verified staff count.
+  const last=response.recounts.at(-1);
+  response.lastInferredRecount=last?{count:last.count,timestamp:last.timestamp,verified:false}:null;
+  const estimateAge=(now.getTime()-Date.parse(last?.timestamp||''))/60000;
+  const estimateReady=runtime.state==='live'&&last&&estimateAge>=0&&estimateAge<=60&&
+   (status.recountModel?.rateSamples||0)>=5&&Number.isFinite(status.estimatedNow);
+  response.occupancyEstimate=estimateReady?{count:status.estimatedNow,ageMinutes:Math.round(estimateAge),experimental:true}:null;
+  // Preserve legacy fields for existing widgets; new UI uses the explicit estimate.
+  if(runtime.state==='live'&&Number.isFinite(response.count))Object.assign(response,L.crowd(response.count,true));
   // Display a warning if source readings are old. Never silently claim LIVE.
   response.sourceAgeMinutes=runtime.sourceAgeMinutes;
   response.dataState=runtime.state;
@@ -220,4 +231,31 @@ exports.trainSeasonalForecast=onSchedule({schedule:'20 4 * * *',timeZone:L.TZ,
  await SEASONAL.set({seasonal,calibration,updatedAt:now.toISOString(),recordDays:records.length});
  logger.info('Seasonal model trained',{recordDays:records.length,recounts:seasonal.recounts,
   calibratedHorizons:Object.values(calibration.horizons).filter(x=>x.p80!==null).length});
+});
+
+ // Anonymous, write-only feedback. Global and browser quotas bound Firestore spend.
+exports.submitFeedback=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:15,
+ maxInstances:2,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
+ res.set('Cache-Control','no-store').set('X-Content-Type-Options','nosniff');
+ if(req.method!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+ if(req.get('origin')!=='https://climbtheknot.live'&&!/^https:\/\/theknotcapacity(?:--[a-z0-9-]+)?\.web\.app$/.test(req.get('origin')||''))return res.status(403).json({ok:false,error:'Use the tracker website.'});
+ if(!req.is('application/json')||(req.rawBody?.length||0)>8192)return res.status(400).json({ok:false,error:'Invalid submission.'});
+ let input;try{input=F.validateFeedback(req.body);}catch(e){return res.status(400).json({ok:false,error:e.message});}
+ const now=new Date(),day=L.parts(now).day,global=db.collection('feedbackLimits').doc(day);
+ const token=createHash('sha256').update(day+':'+input.clientId).digest('hex');
+ const record=db.collection('memberFeedback').doc();
+ try{
+  const status=(await STATUS.get()).data()||{};
+  const accepted=await db.runTransaction(async tx=>{
+   const snap=await tx.get(global),q=snap.data()||{},clients=q.clients||{};
+   const prev=clients[token]||0;
+   if((q.total||0)>=200||now.getTime()-prev<10*60000)return false;
+   tx.set(global,{total:(q.total||0)+1,clients:{...clients,[token]:now.getTime()}});
+   tx.set(record,{...input.report,createdAt:now.toISOString(),context:F.context(status,now),reviewState:'unreviewed'});
+   if(input.contact)tx.set(db.collection('feedbackContacts').doc(record.id),{contact:input.contact,consentAt:now.toISOString()});
+   return true;
+  });
+  if(!accepted)return res.status(429).json({ok:false,error:'Please wait before submitting again.'});
+  return res.status(201).json({ok:true});
+ }catch(e){logger.error('Feedback write failed');return res.status(503).json({ok:false,error:'Feedback unavailable. Try again later.'});}
 });
