@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let busy=false,lastData=null;
-function time(s){return s?new Date(s).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';}
+function time(s){return s?new Date(s).toLocaleTimeString([],{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'—';}
 function hourLabel(h){return (h%12||12)+':00 '+(h<12?'AM':'PM');}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const svg=(name,attr)=>`<${name} ${attr}/>`;
@@ -34,7 +34,7 @@ function dayChart(d){
   const ts=Date.parse(event.timestamp);
   if(!Number.isFinite(ts)||!Number.isFinite(event.count))continue;
   const cx=x(ts).toFixed(2),cy=y(event.count).toFixed(2);
-  const info='Staff recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
+  const info='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
   shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
  }
  if(projected.length>1){
@@ -65,7 +65,7 @@ function dayChart(d){
  }
  for(const event of (d.recounts||[])){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
-  const label='Staff recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
+  const label='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
   markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" tabindex="0" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
  $('dayChart').innerHTML=marks+shapes+markers.join('')+ticks.join('');
@@ -141,11 +141,12 @@ function renderBest(items){
 }
 function render(d){
  lastData=d;
+ window.updateMemberExperience?.(d);
  const state=d.dataState||'offline',live=state==='live',delayed=state==='delayed',closed=state==='closed';
  const color=d.color||'#70e6a2';
  $('connection').textContent=state.toUpperCase();$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
  $('count').textContent=closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count;
- $('status').textContent=closed?'CLOSED':live?d.label:delayed?'DELAYED':'OFFLINE';
+ $('status').textContent=closed?'CLOSED':live?({GREAT:'QUIET',GOOD:'MODERATE',BAD:'VERY BUSY'}[d.label]||d.label):delayed?'DELAYED':'OFFLINE';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
  $('open').textContent=closed?'CLOSED HOURS':live?'OPEN NOW':delayed?'LAST KNOWN COUNT':'DATA UNAVAILABLE';
  const movement=live?(d.trend==='rising'?['↑','Filling Up']:d.trend==='falling'?['↓','Decreasing']:['→','Steady']):null;
@@ -166,6 +167,7 @@ function render(d){
 }
 function errorState(message){
  lastData=null;
+ window.updateMemberExperience?.(null);
  $('connection').textContent='OFFLINE';$('liveDot').style.background='#ff6767';
  $('status').textContent='OFFLINE';$('status').style.color='#ff6767';$('count').textContent='—';
  $('open').textContent='DATA UNAVAILABLE';$('trend').textContent='—';$('fill').style.width='0%';
