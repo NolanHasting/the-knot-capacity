@@ -94,7 +94,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
   }
   if(isFuture){
    for(const p of observed){
-    const info=tick(p.minute)+': '+p.count+(p.assumedClose?' assumed at close':' predicted')+' · '+p.days+' supporting day(s)';
+    const info=tick(p.minute)+': '+p.count+(p.assumedClose?' assumed at close':' predicted');
     html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" tabindex="0" role="button" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
    }
   }
@@ -114,10 +114,10 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
     summary.textContent=label+(d.summary.readings?' · avg. '+d.summary.average+' · peak '+d.summary.max:' · No counts recorded');
     legend.textContent='Reported';
    }else{
-    summary.textContent=label+' · Based on '+d.summary.referenceDays+' past day'+(d.summary.referenceDays===1?'':'s');
-    legend.textContent='Estimate · '+String(d.basis||'history').replace(/_/g,' ').toLowerCase();
+    summary.textContent=label;
+    legend.textContent='Forecast';
    }
-   note.textContent=d.note;
+   note.textContent=d.mode==='future'?(d.points.length?'Based on historical occupancy patterns. Shaded area shows the estimated range.':'Forecast unavailable for this date.'):'Reported counts and inferred recounts.';
    graph(d);
   }catch(e){summary.textContent='Could not load this date';note.textContent='Please try again.';svg.innerHTML='';}
   finally{input.disabled=false;}
