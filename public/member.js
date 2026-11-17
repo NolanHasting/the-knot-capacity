@@ -4,11 +4,11 @@
  let current=null;
  const fmt=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(t);
  const cat=n=>n<=25?'Quiet':n<=50?'Moderate':n<=75?'Busy':n<100?'Very busy':'At reported capacity';
- const zone=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'numeric',hourCycle:'h23'});
+ const weekday=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short'});
  function plan(){
   const d=current,output=el('visitResult'),length=Number(el('sessionLength').value),delay=Number(el('arrivalDelay').value);
   const points=d?.dataState==='live'?d.forecast?.points:null,origin=Date.parse(d?.sourceUpdated||'');
-  if(!points?.length||!Number.isFinite(origin)){output.textContent='Live forecast unavailable. Explore Weekly Trends or another date below.';return;}
+  if(!points?.length||!Number.isFinite(origin)||Date.now()-origin>4*60000){output.textContent='Live forecast unavailable. Explore Weekly Trends or another date below.';return;}
   const earliest=Date.now()+delay*60000;
   const options=[];
   for(let i=0;i<points.length;i++){
@@ -38,7 +38,7 @@
   el('estimateNow').textContent=live&&e?'~'+e.count:'—';
   el('estimateNote').textContent=live&&e?'Experimental estimate · '+e.ageMinutes+' min since inferred recount':'Not enough recent recount evidence';
   el('comparison').textContent=live&&Number.isFinite(d.typicalNow)?(d.count-d.typicalNow===0?'Matches typical reported count':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' typical reported count'):'Historical comparison unavailable';
-  el('hoursNow').textContent=d?.open?'Regular closing: '+([0,6].includes(new Date().toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short'})==='Sun'?0:new Date().toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short'})==='Sat'?6:1)?'10 PM':'11 PM'):'Outside regular hours';
+  el('hoursNow').textContent=d?.open?'Regular closing: '+(['Sat','Sun'].includes(weekday.format(new Date()))?'10 PM':'11 PM'):'Outside regular hours';
   plan();
  };
  for(const id of ['sessionLength','arrivalDelay'])el(id).addEventListener('change',plan);
