@@ -15,10 +15,10 @@ function remainingMinutes(p){return Math.max(0,HOURS[p.dow][1]*60-(p.hour*60+p.m
 function crowd(count,open){
  if(!open)return {level:'closed',label:'CLOSED',color:'#98A29B'};
  if(count>=100)return {level:'atCapacity',label:'AT CAPACITY',color:'#FF6C67'};
- if(count>=76)return {level:'bad',label:'BAD',color:'#FF6C67'};
+ if(count>=76)return {level:'bad',label:'VERY BUSY',color:'#FF6C67'};
  if(count>=51)return {level:'busy',label:'BUSY',color:'#F0C468'};
- if(count>=26)return {level:'good',label:'GOOD',color:'#9FD39B'};
- return {level:'great',label:'GREAT',color:'#9FD39B'};
+ if(count>=26)return {level:'good',label:'MODERATE',color:'#9FD39B'};
+ return {level:'great',label:'QUIET',color:'#9FD39B'};
 }
 // Robust to irregular sampling; recent points have more weight, but one 5-minute jump
 // does not define an hour-long trend. Require >=10 minutes of observed span.
@@ -147,7 +147,7 @@ function best(weekly,now=new Date(),liveForecast=null,forecastTimestamp=null){
   if(options.length)return options.sort((a,b)=>a.average-b.average||a.hour-b.hour).slice(0,4);
  }
  // Only suggest future hours TODAY (not closed hours, not past slots).
- for(let h=Math.max(HOURS[p.dow][0],Math.ceil(minNow/60));h<HOURS[p.dow][1];h++){
+ for(let h=Math.max(HOURS[p.dow][0],Math.ceil(minNow/60));h<HOURS[p.dow][1]-1;h++){
   const t=typical(weekly,{dow:p.dow,hour:h});
   // Avoid declaring an hour 'quiet' based on only a handful of minutes.
   if(t.average===null||t.samples<10)continue;
