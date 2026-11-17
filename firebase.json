@@ -27,6 +27,13 @@
           "functionId": "getOccupancy",
           "region": "us-east1"
         }
+      },
+      {
+        "source": "/api/feedback",
+        "function": {
+          "functionId": "submitFeedback",
+          "region": "us-east1"
+        }
       }
     ],
     "headers": [
