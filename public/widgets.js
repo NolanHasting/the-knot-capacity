@@ -1,0 +1,1 @@
+'use strict';document.getElementById('copyWidget').addEventListener('click',async()=>{const s=document.getElementById('copyStatus');try{const r=await fetch('/knot-widget.js');if(!r.ok)throw Error();await navigator.clipboard.writeText(await r.text());s.textContent='Copied. Paste into Scriptable.';}catch{s.textContent='Use the Download link to copy the script manually.';}});
