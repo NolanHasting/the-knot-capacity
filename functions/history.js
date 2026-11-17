@@ -83,4 +83,18 @@ function future(date,records){
    possibleRecounts:0,recountAdjusted:false},
   basis,note:observed.length?('Based on '+basis+'. Source-based historical profile. Shaded range is illustrative. Closing is assumed empty.'):'Not enough history for this date.'};
 }
-module.exports={dateOnly,dailyBins,historical,future};
+// Retain recount-based values wherever available, use the source profile only for gaps.
+function fillForecastGaps(primary,fallback){
+ if(!primary?.points?.length)return fallback;
+ if(!fallback?.points?.length)return primary;
+ const byMinute=new Map(fallback.points.map(p=>[p.minute,p]));
+ const points=primary.points.map(p=>{
+  if(Number.isFinite(p.count))return p;
+  const other=byMinute.get(p.minute);
+  return Number.isFinite(other?.count)?{...other,source:'historical_average'}:p;
+ });
+ const filled=points.some(p=>p.source==='historical_average');
+ return {...primary,points,basis:filled?'historical occupancy patterns':primary.basis,
+  summary:{...primary.summary,coveredSlots:points.filter(p=>Number.isFinite(p.count)&&!p.assumedClose).length}};
+}
+module.exports={dateOnly,dailyBins,historical,future,fillForecastGaps};
