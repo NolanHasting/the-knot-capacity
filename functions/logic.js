@@ -117,8 +117,9 @@ function quarterTypical(weekly,p){
 function heatmap(weekly){
  const cells=[];
  for(let d=0;d<7;d++)for(let h=7;h<23;h++){
-  const t=typical(weekly,{dow:d,hour:h});
-  cells.push({day:DAYS[d],dayIndex:d,hour:h,average:t.average,samples:t.samples,days:t.days});
+  const closed=h>=HOURS[d][1]||h<HOURS[d][0];
+  const t=closed?{average:null,samples:0,days:0}:typical(weekly,{dow:d,hour:h});
+  cells.push({day:DAYS[d],dayIndex:d,hour:h,average:t.average,samples:t.samples,days:t.days,closed});
  }
  return cells;
 }
