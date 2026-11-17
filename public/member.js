@@ -11,8 +11,6 @@
  const crowdName=n=>n<=25?'Quiet':n<=50?'Moderate':n<=75?'Busy':n<100?'Very busy':'At capacity';
  function windows(d){
   const settings=prefs(),now=Date.now(),today=M.todayWindow(d,now,settings);
-  if(today){el('bestQuick').textContent=clock(today.start);el('bestQuickNote').textContent='Today · '+today.average+' people';}
-  else {el('bestQuick').textContent='—';el('bestQuickNote').textContent=d?.dataState==='live'?'No session remaining':'See upcoming times';}
   const list=el('besttimes'),rows=M.historyWindows(d?.heatmap,now,7,settings);
   el('weeklyPreference').textContent='Today and the next seven days · '+settings.duration+' min';
   list.replaceChildren();
