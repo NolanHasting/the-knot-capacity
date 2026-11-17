@@ -71,7 +71,7 @@ function dayChart(d){
  $('dayChart').innerHTML=marks+shapes+markers.join('')+ticks.join('');
  $('forecastType').textContent=forecast?'Forecast':'Reported only';
  $('dayNote').textContent=forecast?
-  (forecast.disclaimer||'Forecast is an estimate; closing zero is a schedule assumption.'):
+  'Shaded area shows the estimated range. Closing occupancy is assumed to be zero.':
   'Forecast unavailable without live readings.';
 }
 const HEAT_COLORS=[
@@ -147,7 +147,7 @@ function render(d){
  $('rate').textContent=change&&Number.isFinite(change.change)?(change.change>0?'+':'')+change.change:'—';
  $('rateNote').textContent=change?'Reported count change':'Not enough recent data';
  $('usual').textContent=d.typicalNow==null?'—':d.typicalNow;
- $('usualNote').textContent=d.typicalDays>=2?d.typicalDays+' matching days':'Limited history';
+ $('usualNote').textContent=Number.isFinite(d.typicalNow)?'Historical average':'Unavailable';
  $('next').textContent=live&&d.forecast?d.forecast.projected:'—';
  $('nextNote').textContent=live&&d.forecast?'Estimated in '+Math.min(60,d.forecast.horizonMinutes)+' min':'Not available';
  
@@ -178,7 +178,7 @@ async function refresh(){
 }
 $('refresh').onclick=refresh;
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
- document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));
+ document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});
  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
