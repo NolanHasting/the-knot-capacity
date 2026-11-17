@@ -8,13 +8,14 @@ function validateFeedback(body){
  const clean=(v,max)=>{if(v==null)return '';if(typeof v!=='string'||v.length>max)throw Error('Text is too long.');return v.trim();};
  const message=clean(body.message,1500);
  const contact=clean(body.contact,150);
- if(contact&&(!body.contactConsent||!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)||/^\+?[0-9 ()-]{7,25}$/.test(contact))))throw Error('Enter a valid email or phone and agree to follow-up.');
+ if(contact&&(body.contactConsent!==true||!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)||/^\+?[0-9 ()-]{7,25}$/.test(contact))))throw Error('Enter a valid email or phone and agree to follow-up.');
  if(kind==='suggestion'&&!message)throw Error('Enter a suggestion.');
  const report={kind,message};
  if(kind==='crowd'){
   if(body.onSite!==true)throw Error('Only submit a crowd report while at the gym.');
   if(!['quiet','moderate','busy','very_busy'].includes(body.crowd))throw Error('Choose how crowded it feels.');
   if(!['accurate','lower','higher','unsure'].includes(body.accuracy))throw Error('Choose how accurate the count seems.');
+  if(body.count!=null&&typeof body.count!=='string'&&typeof body.count!=='number')throw Error('Invalid headcount.');
   const count=body.count==null||body.count===''?null:Number(body.count);
   if(count!==null&&(!Number.isInteger(count)||count<0||count>300))throw Error('Enter a count from 0 to 300.');
   Object.assign(report,{crowd:body.crowd,accuracy:body.accuracy,observedCount:count,onSite:true});
