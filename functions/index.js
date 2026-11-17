@@ -246,6 +246,7 @@ exports.submitFeedback=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:1
  const record=db.collection('memberFeedback').doc();
  try{
   const status=(await STATUS.get()).data()||{};
+  if(input.report.kind==='crowd'&&!L.openNow(L.parts(now)))return res.status(400).json({ok:false,error:'Crowd reports are accepted during regular gym hours.'});
   const accepted=await db.runTransaction(async tx=>{
    const snap=await tx.get(global),q=snap.data()||{},clients=q.clients||{};
    const prev=clients[token]||0;
