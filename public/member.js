@@ -1,56 +1,43 @@
 'use strict';
 (()=>{
- const el=id=>document.getElementById(id);
- let current=null;
- const fmt=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(t);
- const cat=n=>n<=25?'Quiet':n<=50?'Moderate':n<=75?'Busy':n<100?'Very busy':'At reported capacity';
- const weekday=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short'});
- function plan(){
-  const d=current,output=el('visitResult'),length=Number(el('sessionLength').value),delay=Number(el('arrivalDelay').value);
-  const points=d?.dataState==='live'?d.forecast?.points:null,origin=Date.parse(d?.sourceUpdated||'');
-  if(!points?.length||!Number.isFinite(origin)||Date.now()-origin>4*60000){output.textContent='Live forecast unavailable. Explore Weekly Trends or another date below.';return;}
-  const earliest=Date.now()+delay*60000;
-  const options=[];
-  for(let i=0;i<points.length;i++){
-   const p=points[i],start=origin+p.minutes*60000,end=start+length*60000;
-   if(start<earliest-60000||end>origin+points.at(-1).minutes*60000-30*60000)continue;
-   const group=points.filter(q=>q.minutes>=p.minutes&&q.minutes<=p.minutes+length);
-   if(group.length<Math.floor(length/15)+1)continue;
-   const avg=group.reduce((s,q)=>s+q.count,0)/group.length;
-   const peak=Math.max(...group.map(q=>Number.isFinite(q.high)?q.high:q.count));
-   options.push({start,end,avg,peak,score:avg+.2*peak});
-  }
-  if(!options.length){output.textContent='Not enough time for this session before closing. Try a shorter session or another day.';return;}
-  options.sort((a,b)=>a.score-b.score||a.start-b.start);
-  const top=options[0],alt=options.find(x=>Math.abs(x.start-top.start)>=length*60000);
-  output.replaceChildren();
-  const title=document.createElement('strong');title.textContent=fmt(top.start)+' – '+fmt(top.end);
-  const note=document.createElement('p');note.textContent='Estimated average '+Math.round(top.avg)+' people · '+cat(top.avg)+'. Forecasts are provisional.';
-  output.append(title,note);
-  if(alt){const other=document.createElement('p');other.textContent='Alternative: '+fmt(alt.start)+' – '+fmt(alt.end)+' · about '+Math.round(alt.avg)+' people';output.append(other);}
-  const soon=options.reduce((a,b)=>a.start<b.start?a:b);
-  if(soon.start!==top.start){const now=document.createElement('p');now.textContent='Earliest available: '+fmt(soon.start)+' · about '+Math.round(soon.avg)+' people';output.append(now);}
+ const el=id=>document.getElementById(id),M=window.KnotExperience;
+ const time=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
+ const clock=m=>{const h=Math.floor(m/60);return (h%12||12)+(m%60?':'+String(m%60).padStart(2,'0'):'')+' '+(h<12?'AM':'PM');};
+ const range=w=>clock(w.start)+' – '+clock(w.end);
+ const day=w=>new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}).format(new Date(w.date+'T12:00:00Z'));
+ const node=(tag,s)=>{const n=document.createElement(tag);n.textContent=s;return n;};
+ function windows(d){
+  const today=M.todayWindow(d),out=el('visitResult');
+  out.replaceChildren();
+  if(today){out.append(node('strong',range(today)),node('p','About '+today.average+' people on average'));el('bestQuick').textContent=clock(today.start);el('bestQuickNote').textContent='About '+today.average+' people';}
+  else {out.append(node('p',d?.dataState==='live'?'No full two-hour window remaining today.':'Live forecast unavailable.'));el('bestQuick').textContent='—';el('bestQuickNote').textContent='See best times this week';}
+  const list=el('besttimes');list.replaceChildren();
+  const rows=M.historyWindows(d?.heatmap);
+  if(!rows.length){list.append(node('p','Not enough historical data yet.'));return;}
+  for(const w of rows){const item=node('div','');item.className='window-row';const desc=node('div','');desc.append(node('strong',day(w)),node('small',range(w)));const value=node('div','');value.className='window-count';value.append(node('strong',String(w.average)),node('small',w.days<2?'Limited history':'people on average'));item.append(desc,value);list.append(item);}
  }
  window.updateMemberExperience=d=>{
-  current=d;
-  const live=d?.dataState==='live',r=d?.lastInferredRecount,e=d?.occupancyEstimate;
-  el('recountNow').textContent=live&&r?String(r.count)+' at '+fmt(new Date(r.timestamp)):'—';
-  el('estimateNow').textContent=live&&e?'~'+e.count:'—';
-  el('estimateNote').textContent=live&&e?'Experimental estimate · '+e.ageMinutes+' min since inferred recount':'Not enough recent recount evidence';
-  el('comparison').textContent=live&&Number.isFinite(d.typicalNow)?(d.count-d.typicalNow===0?'Matches typical reported count':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' typical reported count'):'Historical comparison unavailable';
-  el('hoursNow').textContent=d?.open?'Regular closing: '+(['Sat','Sun'].includes(weekday.format(new Date()))?'10 PM':'11 PM'):'Outside regular hours';
-  plan();
+  const ctx=M.liveContext(d),r=ctx.recount,e=ctx.estimate;
+  el('recountNow').textContent=r?r.count+' · '+time.format(new Date(r.timestamp)):'—';
+  el('recountNote').textContent=r?'Inferred from a downward correction':ctx.live?'No recount detected today':'Live data unavailable';
+  el('estimateNow').textContent=e?(e.basis==='reported'?'':'~')+e.count:'—';
+  el('estimateNote').textContent=!e?'Live data unavailable':e.basis==='reported'?'Reported count · no adjustment':e.basis==='recount'?'Based on the last recount':e.basis==='limited'?'Adjusted · older recount':'Adjusted for possible departures';
+  el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';
+  el('hoursNow').textContent=d?.open?'Closes at '+clock(M.close(M.parts(Date.now()).dow)):d?'Closed · regular hours':'';
+  windows(d);
  };
- for(const id of ['sessionLength','arrivalDelay'])el(id).addEventListener('change',plan);
- const form=el('feedbackForm'),kind=el('feedbackKind'),crowd=el('crowdFields'),consent=el('contactConsent'),contact=el('contact');
- function fields(){crowd.hidden=kind.value!=='crowd';for(const x of crowd.querySelectorAll('input,select'))x.disabled=crowd.hidden;el('onSite').required=!crowd.hidden;el('message').required=crowd.hidden;}
- kind.addEventListener('change',fields);fields();
- consent.addEventListener('change',()=>{contact.disabled=!consent.checked;if(contact.disabled)contact.value='';});
+ el('moreWindows').addEventListener('click',()=>document.querySelector('[data-tab="best"]').click());
+ const form=el('feedbackForm'),crowd=el('crowdFields'),msg=el('message'),consent=el('contactConsent'),contact=el('contact');
+ const selected=name=>form.querySelector('input[name="'+name+'"]:checked')?.value;
+ function fields(){const isCrowd=selected('feedbackKind')==='crowd';crowd.hidden=!isCrowd;for(const x of crowd.querySelectorAll('input'))x.disabled=!isCrowd;el('messageWrap').hidden=isCrowd;msg.disabled=isCrowd;msg.required=!isCrowd;}
+ form.querySelectorAll('[name="feedbackKind"]').forEach(x=>x.addEventListener('change',fields));fields();
  let clientId;try{clientId=localStorage.getItem('knot-feedback-token');if(!clientId){clientId=crypto.randomUUID();localStorage.setItem('knot-feedback-token',clientId);}}catch{clientId=crypto.randomUUID();}
  form.addEventListener('submit',async e=>{
-  e.preventDefault();const button=el('submitFeedback'),notice=el('feedbackStatus');button.disabled=true;notice.textContent='Submitting…';
-  const body={kind:kind.value,clientId,message:el('message').value,contactConsent:consent.checked,contact:contact.disabled?'':contact.value};
-  if(kind.value==='crowd')Object.assign(body,{onSite:el('onSite').checked,crowd:el('crowdRating').value,accuracy:el('accuracyRating').value,count:el('observedCount').value});
-  try{const res=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok||!data.ok)throw Error(data.error||'Submission failed');form.reset();fields();contact.disabled=true;notice.textContent='Thanks! Your feedback was submitted.';}catch(err){notice.textContent=err.message||'Submission failed. Try again.';}finally{button.disabled=false;}
+  e.preventDefault();const button=el('submitFeedback'),notice=el('feedbackStatus'),kind=selected('feedbackKind');
+  if(contact.value.trim()&&!consent.checked){notice.textContent='Please agree to be contacted or remove your contact details.';return;}
+  button.disabled=true;notice.textContent='Sending…';
+  const body={kind,clientId,message:kind==='suggestion'?msg.value:'',contactConsent:consent.checked,contact:contact.value};
+  if(kind==='crowd')Object.assign(body,{onSite:el('onSite').checked,crowd:selected('crowdRating'),accuracy:selected('accuracyRating')||'unsure',count:el('observedCount').value});
+  try{const r=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok||!data.ok)throw Error(data.error||'Unable to send feedback.');form.reset();fields();el('contactDetails').open=false;notice.textContent='Feedback sent. Thank you.';}catch(err){notice.textContent=err instanceof SyntaxError?'Feedback is temporarily unavailable. Please try again later.':err.message||'Unable to send feedback.';}finally{button.disabled=false;}
  });
 })();
