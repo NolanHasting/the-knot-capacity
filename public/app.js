@@ -56,12 +56,12 @@ function dayChart(d){
  const markers=[];
  for(let i=0;i<history.length;i+=Math.max(1,Math.ceil(history.length/110))){
   const p=history[i],label=time(p.timestamp)+': '+p.count+' reported';
-  markers.push('<circle class="chart-point" cx="'+x(Date.parse(p.timestamp)).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" tabindex="0" role="button" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(Date.parse(p.timestamp)).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" tabindex="0" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
  for(const p of projected){
   if(!Number.isFinite(p.count))continue;
   const label=time(new Date(p.ts).toISOString())+': '+p.count+' forecast · possible '+p.low+'–'+p.high;
-  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" tabindex="0" role="button" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" tabindex="0" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
  for(const event of (d.recounts||[])){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
@@ -192,3 +192,4 @@ function showChartPoint(e){
 }
 $('dayChart').addEventListener('click',showChartPoint);
 $('dayChart').addEventListener('focusin',showChartPoint);
+$('dayChart').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){if(e.target.closest('[data-info]')){e.preventDefault();showChartPoint(e);}}});
