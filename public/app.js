@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let busy=false,lastData=null;
-function time(s){return s?new Date(s).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';}
+function time(s){return s?new Date(s).toLocaleTimeString([],{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'—';}
 function hourLabel(h){return (h%12||12)+':00 '+(h<12?'AM':'PM');}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const svg=(name,attr)=>`<${name} ${attr}/>`;
@@ -34,7 +34,7 @@ function dayChart(d){
   const ts=Date.parse(event.timestamp);
   if(!Number.isFinite(ts)||!Number.isFinite(event.count))continue;
   const cx=x(ts).toFixed(2),cy=y(event.count).toFixed(2);
-  const info='Staff recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
+  const info='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
   shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
  }
  if(projected.length>1){
@@ -65,11 +65,11 @@ function dayChart(d){
  }
  for(const event of (d.recounts||[])){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
-  const label='Staff recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
+  const label='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
   markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" tabindex="0" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
  $('dayChart').innerHTML=marks+shapes+markers.join('')+ticks.join('');
- $('forecastType').textContent=forecast?'FORECAST':'REPORTED ONLY';
+ $('forecastType').textContent=forecast?'Forecast':'Reported only';
  $('dayNote').textContent=forecast?
   (forecast.disclaimer||'Forecast is an estimate; closing zero is a schedule assumption.'):
   'Forecast unavailable without live readings.';
@@ -94,11 +94,12 @@ function renderHeat(cells){
  for(let h=7;h<23;h++){
   markup+='<div class="heat-hour">'+esc(hourLabel(h).replace(':00 ',' '))+'</div>';
   for(let d=0;d<7;d++){
-   const v=indexed.get(d+'-'+h),recorded=v&&Number.isFinite(v.average);
+   const closed=h>=(d===0||d===6?22:23);
+   const v=closed?null:indexed.get(d+'-'+h),recorded=v&&Number.isFinite(v.average);
    const color=recorded?heatColor(v.average):'#202020';
-   const label=recorded?days[d]+' '+hourLabel(h)+': '+v.average+' people on average, '+(v.days||0)+' day'+(v.days===1?'':'s'):'No data for '+days[d]+' '+hourLabel(h);
+   const label=closed?days[d]+' '+hourLabel(h)+': Closed':recorded?days[d]+' '+hourLabel(h)+': '+v.average+' people on average, '+(v.days||0)+' day'+(v.days===1?'':'s'):'No data for '+days[d]+' '+hourLabel(h);
    const key=d+'-'+h;
-   markup+='<button type="button" class="heat-cell'+(selected===key?' is-selected':'')+'" style="--heat-color:'+color+
+   markup+='<button type="button" class="heat-cell'+(closed?' heat-closed':!recorded?' heat-missing':'')+(selected===key?' is-selected':'')+'" style="--heat-color:'+color+
     '" data-key="'+key+'" data-info="'+esc(label)+'" aria-label="'+esc(label)+
     '" aria-pressed="'+(selected===key?'true':'false')+'"></button>';
   }
@@ -126,34 +127,22 @@ $('heatmap').addEventListener('focusin',e=>inspectHeat(e.target,false));
 $('heatmap').addEventListener('pointerover',e=>{
  if(e.pointerType==='mouse'||e.pointerType==='pen')inspectHeat(e.target,false);
 });
-function renderBest(items){
- const options=(items||[]).filter(x=>Number.isFinite(x.average));
- const isPrediction=x=>x.source==='forecast';
- $('besttimes').innerHTML=options.length?options.map(v=>{
-  const basis=isPrediction(v)?'Forecast for today':'Past '+v.days+' day'+(v.days===1?'':'s');
-  const extra=isPrediction(v)?(v.days>=2?' · '+v.days+' matching days':' · Limited history'):' · '+(v.days>=3?'Based on several days':'Limited history');
-  return '<div class="bestitem"><div class="eyebrow">'+esc(v.day)+' · '+esc(hourLabel(v.hour))+'</div><strong>'+v.average+' <small>expected people</small></strong><small>'+esc(basis)+esc(extra)+'</small></div>';
- }).join(''):
- '<div class="fine">Not enough information to suggest a quieter hour yet.</div>';
- const top=options[0];
- $('bestQuick').textContent=top?hourLabel(top.hour).replace(':00',''):'—';
- $('bestQuickNote').textContent=top?(top.source==='forecast'?'Forecast: '+top.average:'Past avg: '+top.average)+' people':'Not enough history yet';
-}
 function render(d){
  lastData=d;
+
  const state=d.dataState||'offline',live=state==='live',delayed=state==='delayed',closed=state==='closed';
  const color=d.color||'#70e6a2';
- $('connection').textContent=state.toUpperCase();$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
+ $('connection').textContent=({live:'Live',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
  $('count').textContent=closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count;
- $('status').textContent=closed?'CLOSED':live?d.label:delayed?'DELAYED':'OFFLINE';
+ $('status').textContent=closed?'Closed':live?({GREAT:'Quiet',GOOD:'Moderate',BAD:'Very busy',QUIET:'Quiet',MODERATE:'Moderate',BUSY:'Busy','VERY BUSY':'Very busy','AT CAPACITY':'At capacity'}[d.label]||'Unknown'):delayed?'Delayed':'Offline';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
- $('open').textContent=closed?'CLOSED HOURS':live?'OPEN NOW':delayed?'LAST KNOWN COUNT':'DATA UNAVAILABLE';
- const movement=live?(d.trend==='rising'?['↑','Filling Up']:d.trend==='falling'?['↓','Decreasing']:['→','Steady']):null;
+ $('open').textContent=closed?'Closed':live?'Open now':delayed?'Last known count':'Data unavailable';
+ const movement=live?(d.trend==='rising'?['↑','Getting busier']:d.trend==='falling'?['↓','Getting quieter']:['→','Steady']):null;
  $('trend').textContent=movement?movement[0]+' '+movement[1]:'—';
  $('trend').style.color=live?'#fff':'#aaa';
  $('fill').style.width=closed||state==='offline'||!Number.isFinite(d.percent)?'0%':Math.min(100,d.percent)+'%';$('fill').style.background=color;
- $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of 100 reference'+(d.count>100?' · above reference':''):'—';
- $('updated').textContent=d.sourceUpdated?'Last received '+time(d.sourceUpdated):'No reading received';
+ $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'—';
+ $('updated').textContent=d.sourceUpdated?'Updated at '+time(d.sourceUpdated):'No reading received';
  const change=live?d.reportedChange30:null;
  $('rate').textContent=change&&Number.isFinite(change.change)?(change.change>0?'+':'')+change.change:'—';
  $('rateNote').textContent=change?'Reported count change':'Not enough recent data';
@@ -162,13 +151,14 @@ function render(d){
  $('next').textContent=live&&d.forecast?d.forecast.projected:'—';
  $('nextNote').textContent=live&&d.forecast?'Estimated in '+Math.min(60,d.forecast.horizonMinutes)+' min':'Not available';
  
- dayChart(d);renderHeat(d.heatmap);renderBest(d.bestTimes);
+ dayChart(d);renderHeat(d.heatmap);window.updateMemberExperience?.(d);
 }
 function errorState(message){
  lastData=null;
- $('connection').textContent='OFFLINE';$('liveDot').style.background='#ff6767';
- $('status').textContent='OFFLINE';$('status').style.color='#ff6767';$('count').textContent='—';
- $('open').textContent='DATA UNAVAILABLE';$('trend').textContent='—';$('fill').style.width='0%';
+ window.updateMemberExperience?.(null);
+ $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
+ $('status').textContent='Offline';$('status').style.color='#ff6767';$('count').textContent='—';
+ $('open').textContent='Data unavailable';$('trend').textContent='—';$('fill').style.width='0%';
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='—';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
  $('updated').textContent='—';$('capacity').textContent='—';
  $('dayNote').textContent='Data unavailable.';clearChart('Unable to load counts.');
@@ -192,7 +182,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-refresh();setInterval(refresh,30000);
+refresh();setInterval(()=>{if(!document.hidden)refresh();},30000);
 const dayLayout=window.matchMedia('(max-width: 600px)');
 dayLayout.addEventListener('change',()=>{if(lastData)dayChart(lastData);});
 

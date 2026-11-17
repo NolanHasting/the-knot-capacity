@@ -87,7 +87,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    for(const event of (data.recounts||[])){
     if(!Number.isFinite(event.count)||!Number.isFinite(Date.parse(event.timestamp)))continue;
     const mx=x(localMinute(event.timestamp)),my=y(event.count);
-    const info='Staff recount · '+tick(localMinute(event.timestamp))+' · '+event.count+' reported · down '+event.drop;
+    const info='Inferred recount · '+tick(localMinute(event.timestamp))+' · '+event.count+' reported · down '+event.drop;
     html+='<path d="M'+mx+' '+(my-6)+' l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>'+safe(info)+'</title></path>';
     html+='<circle class="chart-point" cx="'+mx+'" cy="'+my+'" r="'+(mobile?12:10)+'" fill="transparent" tabindex="0" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"/>';
    }
@@ -112,14 +112,14 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    const label=dayFmt.format(new Date(date+'T12:00:00Z'));
    if(d.mode==='historical'){
     summary.textContent=label+(d.summary.readings?' · avg. '+d.summary.average+' · peak '+d.summary.max:' · No counts recorded');
-    legend.textContent='REPORTED';
+    legend.textContent='Reported';
    }else{
     summary.textContent=label+' · Based on '+d.summary.referenceDays+' past day'+(d.summary.referenceDays===1?'':'s');
-    legend.textContent='ESTIMATE · '+d.basis.toUpperCase();
+    legend.textContent='Estimate · '+String(d.basis||'history').replace(/_/g,' ').toLowerCase();
    }
    note.textContent=d.note;
    graph(d);
-  }catch(e){summary.textContent='Could not load this date';note.textContent=e.message;svg.innerHTML='';}
+  }catch(e){summary.textContent='Could not load this date';note.textContent='Please try again.';svg.innerHTML='';}
   finally{input.disabled=false;}
  }
  const today=new Date(),iso=localDay(today),addDays=n=>{
