@@ -80,7 +80,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
   if(!isFuture){
    for(let i=0;i<source.length;i+=Math.max(1,Math.ceil(source.length/130))){
     const p=source[i];
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" tabindex="0" role="button" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" tabindex="0" role="button" aria-label="'+safe(tick(p.minute)+': '+p.count+' reported')+'" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
    }
   }
   if(!isFuture){
@@ -94,8 +94,8 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
   }
   if(isFuture){
    for(const p of observed){
-    const info=tick(p.minute)+': '+p.count+(p.assumedClose?' assumed at close':' predicted')+' · '+p.days+' supporting day(s)';
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" tabindex="0" role="button" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
+    const info=tick(p.minute)+': '+p.count+(p.assumedClose?' assumed at close':' predicted');
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" tabindex="0" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
    }
   }
   svg.innerHTML=html;
@@ -114,10 +114,10 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
     summary.textContent=label+(d.summary.readings?' · avg. '+d.summary.average+' · peak '+d.summary.max:' · No counts recorded');
     legend.textContent='Reported';
    }else{
-    summary.textContent=label+' · Based on '+d.summary.referenceDays+' past day'+(d.summary.referenceDays===1?'':'s');
-    legend.textContent='Estimate · '+String(d.basis||'history').replace(/_/g,' ').toLowerCase();
+    summary.textContent=label;
+    legend.textContent='Forecast';
    }
-   note.textContent=d.note;
+   note.textContent=d.mode==='future'?(d.points.length?'Based on historical occupancy patterns. Shaded area shows the estimated range.':'Forecast unavailable for this date.'):'Reported counts and inferred recounts.';
    graph(d);
   }catch(e){summary.textContent='Could not load this date';note.textContent='Please try again.';svg.innerHTML='';}
   finally{input.disabled=false;}
@@ -136,6 +136,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
  }
  svg.addEventListener('click',showPoint);
  svg.addEventListener('focusin',showPoint);
+ svg.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.closest('[data-info]')){e.preventDefault();showPoint(e);}});
  el('historyPrevious').onclick=()=>{if(input.value>input.min){input.value=addFrom(input.value,-1);load();}};
  el('historyNext').onclick=()=>{if(input.value<input.max){input.value=addFrom(input.value,1);load();}};
  function addFrom(value,n){const d=new Date(value+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}

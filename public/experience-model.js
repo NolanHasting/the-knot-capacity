@@ -39,36 +39,56 @@
   if(rate===null||elapsed>120)return {live:true,recount:last,estimate:{count:d.count,basis:'reported',ageMinutes:Math.floor(elapsed)}};
   return {live:true,recount:last,estimate:{count:Math.max(0,Math.round(d.count-Math.max(0,Math.min(2,rate))*elapsed)),basis:elapsed>90?'limited':'adjusted',ageMinutes:Math.floor(elapsed)}};
  }
- function historyWindows(cells,now=Date.now(),days=7){
-  const p=parts(now),lookup=new Map((cells||[]).map(c=>[c.dayIndex+'-'+c.hour,c]));
+ const preferences={quiet:[0,25],balanced:[26,50],social:[51,75]};
+ function settings(options={}){
+  const preference=Object.hasOwn(preferences,options.preference)?options.preference:'quiet';
+  const duration=[60,90,120].includes(Number(options.duration))?Number(options.duration):120;
+  const periods={any:[420,1440],morning:[420,720],afternoon:[720,1020],evening:[1020,1440]};
+  const period=Object.hasOwn(periods,options.period)?periods[options.period]:periods.any;
+  return {preference,duration,period};
+ }
+ function rank(values,pref){
+  const avg=values.reduce((a,b)=>a+b,0)/values.length,peak=Math.max(...values);
+  const [lo,hi]=preferences[pref];
+  const distance=x=>Math.max(lo-x,0,x-hi);
+  // Reward a consistent atmosphere, not the busiest possible gym.
+  const score=pref==='quiet'?avg+.12*peak:values.reduce((a,v)=>a+distance(v),0)/values.length+Math.abs(avg-(lo+hi)/2)*.2+.12*Math.max(0,peak-hi);
+  return {average:Math.round(avg),score};
+ }
+ function historyWindows(cells,now=Date.now(),days=7,options={}){
+  const p=parts(now),lookup=new Map((cells||[]).map(c=>[c.dayIndex+'-'+c.hour,c])),s=settings(options);
   const out=[];
   for(let offset=1;offset<=days;offset++){
    const date=new Date(p.date+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+offset);
    const dow=date.getUTCDay(),iso=date.toISOString().slice(0,10);let best=null;
-   for(let hour=7;hour+2<=close(dow)/60-1;hour++){
-    const a=lookup.get(dow+'-'+hour),b=lookup.get(dow+'-'+(hour+1));
-    if(!finite(a?.average)||!finite(b?.average)||(a.samples||0)<10||(b.samples||0)<10)continue;
-    const support=Math.min(a.days||0,b.days||0),avg=(a.average+b.average)/2;
-    const score=avg+.1*Math.max(a.average,b.average)+(support<2?5:0);
-    const row={date:iso,dow,start:hour*60,end:(hour+2)*60,average:Math.round(avg),days:support,score,source:'history'};
-    if(!best||score<best.score)best=row;
+   for(let start=Math.max(420,s.period[0]);start+s.duration<=Math.min(close(dow)-60,s.period[1]);start+=30){
+    const values=[],supports=[];
+    for(let t=start;t<start+s.duration;t+=15){
+     const cell=lookup.get(dow+'-'+Math.floor(t/60));
+     if(!finite(cell?.average)||cell.closed||(cell.samples||0)<10)break;
+     values.push(cell.average);supports.push(cell.days||0);
+    }
+    if(values.length!==s.duration/15)continue;
+    const support=Math.min(...supports),result=rank(values,s.preference);
+    const row={date:iso,dow,start,end:start+s.duration,average:result.average,days:support,score:result.score+(support<2?5:0),source:'history'};
+    if(!best||row.score<best.score)best=row;
    }if(best)out.push(best);
   }
   return out.sort((a,b)=>a.score-b.score||a.date.localeCompare(b.date));
  }
- function todayWindow(d,now=Date.now()){
-  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),points=d?.forecast?.points;
+ function todayWindow(d,now=Date.now(),options={}){
+  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),points=d?.forecast?.points,s=settings(options);
   if(d?.dataState!=='live'||!finite(origin)||now-origin>4*MIN||origin-now>MIN||!Array.isArray(points))return null;
-  const rows=points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({...x,t:origin+x.minutes*MIN}));
-  const options=[];
-  for(let start=Math.ceil(p.minute/30)*30;start+120<=close(p.dow)-30;start+=30){
-   const t=now+(start-p.minute)*MIN-(now%MIN),end=t+120*MIN;
-   if(t<now-MIN||rows[0]?.t>t+MIN||rows.at(-1)?.t<end)continue;
-   const values=[];for(let k=0;k<120;k+=15){const at=t+k*MIN;const a=rows.findLast(x=>x.t<=at),b=rows.find(x=>x.t>=at);if(!a||!b)break;const f=b.t===a.t?0:(at-a.t)/(b.t-a.t);values.push(a.count+(b.count-a.count)*f);}
-   if(values.length!==8)continue;
-   const avg=values.reduce((s,v)=>s+v,0)/8;options.push({date:p.date,dow:p.dow,start,end:start+120,average:Math.round(avg),score:avg+.1*Math.max(...values),source:'forecast'});
+  const rows=points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({...x,t:origin+x.minutes*MIN})).sort((a,b)=>a.t-b.t);
+  const candidates=[];
+  for(let start=Math.max(420,s.period[0],Math.ceil(p.minute/30)*30);start+s.duration<=Math.min(close(p.dow)-30,s.period[1]);start+=30){
+   const t=now+(start-p.minute)*MIN-(now%MIN),end=t+s.duration*MIN;
+   if(t<now-MIN||rows[0]?.t>t||rows.at(-1)?.t<end)continue;
+   const values=[];for(let k=0;k<s.duration;k+=15){const at=t+k*MIN;const a=rows.findLast(x=>x.t<=at),b=rows.find(x=>x.t>=at);if(!a||!b)break;const f=b.t===a.t?0:(at-a.t)/(b.t-a.t);values.push(a.count+(b.count-a.count)*f);}
+   if(values.length!==s.duration/15)continue;
+   candidates.push({date:p.date,dow:p.dow,start,end:start+s.duration,...rank(values,s.preference),source:'forecast'});
   }
-  return options.sort((a,b)=>a.score-b.score||a.start-b.start)[0]||null;
+  return candidates.sort((a,b)=>a.score-b.score||a.start-b.start)[0]||null;
  }
  return {parts,close,recounts,liveContext,historyWindows,todayWindow};
 });

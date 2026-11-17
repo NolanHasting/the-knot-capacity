@@ -168,15 +168,16 @@ exports.getHistory=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
    if(season?.days>=3&&season.recounts>=6)response=S.futureDay(date,season);
    // A trained model can have no supported observations for a particular
    // weekday/hour; in that case preserve the historical source-based fallback.
-   if(!response?.points?.length){
-    const lower=new Date(Date.parse(date+'T12:00:00Z')-60*86400000).toISOString().slice(0,10);
-    const summaries=await db.collection('dailySummaries').orderBy(FieldPath.documentId()).startAt(lower).endBefore(date).limit(60).get();
+   if(!response?.points?.length||response.points.some(p=>p.count===null)){
+    const lower=new Date(Date.parse(today+'T12:00:00Z')-60*86400000).toISOString().slice(0,10);
+    const summaries=await db.collection('dailySummaries').orderBy(FieldPath.documentId()).startAt(lower).endBefore(today).limit(60).get();
     let records=summaries.docs.map(d=>({...d.data(),date:d.id}));
     if(records.length<3){
-     const old=await db.collection('days').orderBy(FieldPath.documentId()).startAt(lower).endBefore(date).limit(60).get();
+     const old=await db.collection('days').orderBy(FieldPath.documentId()).startAt(lower).endBefore(today).limit(60).get();
      records=old.docs.map(d=>({...d.data(),date:d.id}));
     }
-    response=H.future(date,records);
+    const fallback=H.future(date,records);
+    response=H.fillForecastGaps(response,fallback);
    }
   }
   res.json({ok:true,...response});
