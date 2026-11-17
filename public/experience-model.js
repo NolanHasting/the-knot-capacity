@@ -90,5 +90,33 @@
   }
   return candidates.sort((a,b)=>a.score-b.score||a.start-b.start)[0]||null;
  }
- return {parts,close,recounts,liveContext,historyWindows,todayWindow};
+ // Independent dashboard recommendation: find a quieter hour later today,
+ // without applying a user's preferred atmosphere, duration or availability.
+ function quieterLater(d,now=Date.now()){
+  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),points=d?.forecast?.points;
+  if(d?.dataState!=='live'||!finite(d.count)||!finite(origin)||now-origin>4*MIN||origin-now>MIN||!Array.isArray(points))return {state:'unavailable'};
+  const rows=points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({t:origin+x.minutes*MIN,count:x.count})).sort((a,b)=>a.t-b.t);
+  const sample=t=>{
+   let a=null,b=null;
+   for(const r of rows){if(r.t<=t)a=r;if(r.t>=t){b=r;break;}}
+   if(!a||!b||b.t-a.t>30*MIN)return null;
+   return a.t===b.t?a.count:a.count+(b.count-a.count)*(t-a.t)/(b.t-a.t);
+  };
+  const candidates=[];
+  // Avoid the closing taper, which can otherwise make closing look attractive.
+  for(let start=Math.max(420,Math.ceil((p.minute+15)/30)*30);start+60<=close(p.dow)-60;start+=30){
+   const t=now+(start-p.minute)*MIN-now%MIN;
+   const values=[0,15,30,45,60].map(m=>sample(t+m*MIN));
+   if(values.some(v=>v===null))continue;
+   const avg=(values[0]/2+values[1]+values[2]+values[3]+values[4]/2)/4;
+   candidates.push({start,end:start+60,average:Math.round(avg),score:avg+.12*Math.max(...values)});
+  }
+  if(!candidates.length)return {state:'no_window'};
+  const sorted=candidates.sort((a,b)=>a.score-b.score||a.start-b.start);
+  const lower=sorted.filter(w=>w.average<=d.count-3);
+  if(!lower.length)return {state:'not_quieter'};
+  const best=lower[0],selected=lower.filter(x=>x.score<=best.score+2).sort((a,b)=>a.start-b.start)[0];
+  return {state:'recommended',...selected};
+ }
+ return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater};
 });

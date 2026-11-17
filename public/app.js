@@ -127,6 +127,12 @@ $('heatmap').addEventListener('focusin',e=>inspectHeat(e.target,false));
 $('heatmap').addEventListener('pointerover',e=>{
  if(e.pointerType==='mouse'||e.pointerType==='pen')inspectHeat(e.target,false);
 });
+function renderQuieterLater(d){
+ const result=window.KnotExperience?.quieterLater(d);
+ const clock=m=>{const h=Math.floor(m/60);return (h%12||12)+(m%60?':'+String(m%60).padStart(2,'0'):'')+' '+(h<12?'AM':'PM');};
+ $('bestQuick').textContent=result?.state==='recommended'?clock(result.start):'—';
+ $('bestQuickNote').textContent=result?.state==='recommended'?'About '+result.average+' people for the next hour':d?.dataState==='closed'?'Closed today':result?.state==='not_quieter'?'No quieter hour expected':result?.state==='no_window'?'No later hour available':'Forecast unavailable';
+}
 function render(d){
  lastData=d;
 
@@ -151,6 +157,7 @@ function render(d){
  $('next').textContent=live&&d.forecast?d.forecast.projected:'—';
  $('nextNote').textContent=live&&d.forecast?'Estimated in '+Math.min(60,d.forecast.horizonMinutes)+' min':'Not available';
  
+ renderQuieterLater(d);
  dayChart(d);renderHeat(d.heatmap);window.updateMemberExperience?.(d);
 }
 function errorState(message){

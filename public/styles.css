@@ -145,3 +145,10 @@ button:focus-visible,a:focus-visible,summary:focus-visible,select:focus-visible,
 .heat-detail{font-size:.875rem}.member-nav a{display:inline-flex;align-items:center;min-height:44px}
 @media(max-width:600px){.heat{grid-template-columns:48px repeat(7,minmax(24px,1fr));gap:3px}.heat .heat-cell{min-width:24px;min-height:28px}.heat .heat-heading,.heat .heat-hour{font-size:.6875rem}.count-context strong{font-size:1.125rem}.climb-filters{gap:8px}}
 @media(max-width:360px){.heat{grid-template-columns:44px repeat(7,minmax(24px,1fr));gap:2px}.climb-filters{grid-template-columns:1fr}}
+
+/* Heatmap fills are the visual signal, not cell outlines. */
+.heat .heat-cell,.heat .heat-cell.heat-closed,.heat .heat-cell.heat-missing{border:0}
+.heat .heat-cell:hover{filter:brightness(1.24)}
+.heat .heat-cell.is-selected{border:0;box-shadow:inset 0 0 0 2px #fff}
+.heat .heat-cell:focus-visible{outline:2px solid #f0c468;outline-offset:2px}
+.heat-key-closed{border:0}
