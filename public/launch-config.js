@@ -1,2 +1,2 @@
-// Set GA4 measurement ID only after configuring the property and privacy disclosures.
-window.KNOT_CONFIG={ga4:''};
+// Public measurement ID for the climbtheknot.live web stream.
+window.KNOT_CONFIG={ga4:'G-KPTD3T0X60'};
