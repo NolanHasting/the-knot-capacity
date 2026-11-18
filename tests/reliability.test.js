@@ -33,12 +33,16 @@ assert.equal(statusCacheSeconds(source,'live',at('2026-11-16T14:02:10Z')),5);
 assert.equal(statusCacheSeconds(source,'live',at('2026-11-16T14:02:15Z')),0);
 assert.equal(statusCacheSeconds(source,'closed',at('2026-11-16T11:59:56Z')),4);
 const last={count:30,timestamp:'2026-11-16T13:30:00Z'};
-const status={...source,estimatedNow:35,recountModel:{lastResetAt:last.timestamp,rateSamples:5}};
-assert.deepEqual(occupancyEstimate(status,last,'live',at('2026-11-16T14:00:00Z')),
- {count:35,ageMinutes:30,experimental:true});
-assert.equal(occupancyEstimate(status,last,'delayed',at('2026-11-16T14:00:00Z')),null);
-assert.equal(occupancyEstimate(status,{...last,timestamp:source.sourceUpdated},'live',at('2026-11-16T14:00:00Z')),null);
-assert.equal(occupancyEstimate(status,last,'live',at('2026-11-16T14:31:00Z')),null);
+const status={...source,count:50,recountModel:{lastResetAt:last.timestamp,rateSamples:5,departuresPerMinute:0.5}};
+const estimate=(changes={},recount=last,state='live',typical=null)=>
+ occupancyEstimate({...status,...changes},recount,state,at(source.sourceUpdated),typical);
+assert.equal(estimate().count,35);
+assert.equal(estimate({sourceUpdated:'2026-11-16T16:00:00Z'}).count,20);
+assert.equal(estimate({},null).count,50);
+assert.equal(estimate({count:0},null).count,0);
+assert.equal(estimate({},last,'delayed',28).count,28);
+assert.equal(estimate({},last,'offline').basis,'last_reported');
+assert.equal(estimate({},last,'closed').count,0);
 // The frozen forecast identifies its implementation, not a hard-coded legacy model.
 const t=at('2026-11-16T14:00:00Z'),day='2026-11-16';
 const observed=[{timestamp:at('2026-11-16T14:15:00Z').toISOString(),count:45}];

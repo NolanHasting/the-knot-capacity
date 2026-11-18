@@ -6,7 +6,7 @@
  const range=w=>clock(w.start)+' – '+clock(w.end);
  const day=w=>new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}).format(new Date(w.date+'T12:00:00Z'));
  const node=(tag,s)=>{const n=document.createElement(tag);n.textContent=s;return n;};
- let latest=null,lastResults=null;
+ let latest=null,lastResults=null,lastEstimate=null;
  const prefs=()=>({threshold:Number(el("climbLimit").value),duration:Number(el("climbDuration").value),period:el("climbPeriod").value});
  function windows(d){
   const settings=prefs(),now=Date.now(),today=M.thresholdWindows(d,now,settings);
@@ -45,8 +45,9 @@
   const ctx=M.liveContext(d),r=ctx.recount,e=ctx.estimate;
   el('recountNow').textContent=r?r.count:'—';
   el('recountNote').textContent=r?time.format(new Date(r.timestamp))+' ET':'';
-  el('estimateNow').textContent=e?e.count:'—';
-  el('estimateNote').textContent=e?'Accounts for departures':'';
+  if(e)lastEstimate=e;
+  el('estimateNow').textContent=lastEstimate?.count??'—';
+  el('estimateNote').textContent=e?({reported:'Latest reported count',historical:'Historical hourly average',closed:'Gym closed',last_reported:'Last reported count'}[e.basis]||'Adjusted for departures'):(lastEstimate?'Last available estimate':'Awaiting first reading');
   el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';
   el('hoursNow').textContent=d?.open?'Closes at '+clock(M.close(M.parts(Date.now()).dow)):'';
   windows(d);
