@@ -7,6 +7,13 @@
  const day=w=>new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}).format(new Date(w.date+'T12:00:00Z'));
  const node=(tag,s)=>{const n=document.createElement(tag);n.textContent=s;return n;};
  let latest=null,lastResults=null,lastEstimate=null;
+ const estimateNotes={
+  reported:'Using the gym’s count',
+  recount_adjusted:'Allows for people who may have left',
+  historical:'Based on past counts for this hour',
+  last_reported:'Using the gym’s last available count',
+  closed:'Outside scheduled hours'
+ };
  const prefs=()=>({threshold:Number(el("climbLimit").value),duration:Number(el("climbDuration").value),period:el("climbPeriod").value});
  function windows(d){
   const settings=prefs(),now=Date.now(),today=M.thresholdWindows(d,now,settings);
@@ -47,7 +54,8 @@
   el('recountNote').textContent=r?time.format(new Date(r.timestamp))+' ET':'';
   if(e)lastEstimate=e;
   el('estimateNow').textContent=lastEstimate?.count??'—';
-  el('estimateNote').textContent=e?({reported:'Latest reported count',historical:'Historical hourly average',closed:'Gym closed',last_reported:'Last reported count'}[e.basis]||'Adjusted for departures'):(lastEstimate?'Last available estimate':'Awaiting first reading');
+  el('estimateNote').textContent=e?(estimateNotes[e.basis]||'Estimated occupancy'):
+   (lastEstimate?'Showing the previous estimate':'Waiting for a count');
   el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';
   el('hoursNow').textContent=d?.open?'Closes at '+clock(M.close(M.parts(Date.now()).dow)):'';
   windows(d);
