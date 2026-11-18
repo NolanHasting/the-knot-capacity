@@ -304,7 +304,19 @@ exports.getAdminDashboard=onRequest({region:REGION,memory:'256MiB',timeoutSecond
  try{const decoded=await getAuth().verifyIdToken(token,true);if(decoded.admin!==true)return res.status(403).json({ok:false,error:'Administrator access required.'});}
  catch{return res.status(401).json({ok:false,error:'Invalid or expired session.'});}
  try{
-  const [daily,feedback,scores,current]=await Promise.all([db.collection('productDaily').orderBy(FieldPath.documentId(),'desc').limit(30).get(),db.collection('memberFeedback').orderBy('createdAt','desc').limit(50).get(),db.collection('forecastScores').orderBy(FieldPath.documentId(),'desc').limit(14).get(),STATUS.get()]);
-  return res.json({ok:true,daily:daily.docs.map(d=>({date:d.id,...d.data()})),feedback:feedback.docs.map(d=>P.feedbackView(d.data())),scores:scores.docs.map(d=>({date:d.id,...d.data()})),health:health(current.data()||{})});
+  const today=L.parts(new Date()).day;
+  const recent=(collection,days)=>{
+   const first=new Date(Date.parse(today+'T12:00:00Z')-(days-1)*86400000).toISOString().slice(0,10);
+   return db.collection(collection).orderBy(FieldPath.documentId()).startAt(first).endAt(today).get();
+  };
+  const [daily,feedback,scores,current]=await Promise.all([
+   recent('productDaily',30),
+   db.collection('memberFeedback').orderBy('createdAt','desc').limit(50).get(),
+   recent('forecastScores',14),
+   STATUS.get()
+  ]);
+  const newestFirst=snapshot=>snapshot.docs.slice().reverse().map(doc=>({...doc.data(),date:doc.id}));
+  return res.json({ok:true,daily:newestFirst(daily),feedback:feedback.docs.map(d=>P.feedbackView(d.data())),
+   scores:newestFirst(scores),health:health(current.data()||{})});
  }catch(e){logger.error('Admin dashboard read failed');return res.status(503).json({ok:false,error:'Unable to load dashboard.'});}
 });
