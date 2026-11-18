@@ -272,7 +272,9 @@
 .share-status[hidden] { display: none; }
 .share-status a { color: #9fd39b; }
 
-#adminData article { overflow: auto; margin: 16px 0; }
+#adminData article { margin: 16px 0; }
+.admin-table-scroll { overflow: auto; }
+.admin-table-scroll:focus-visible { outline: 3px solid #b4e2bc; outline-offset: 3px; }
 #adminData table { border-collapse: collapse; width: 100%; font-size: 13px; }
 #adminData td, #adminData th { padding: 8px; text-align: left; border-bottom: 1px solid #333; }
 #adminData pre { white-space: pre-wrap; }
