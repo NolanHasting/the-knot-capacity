@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict'),P=require('../functions/product'),M=require('../public/experience-model');
+const id='12345678-1234-1234-1234-123456789abc';
+const e=P.validateEvent({event:'page_view',channel:'direct',visitor:id,session:id,email:'ignored'});
+assert(!('email' in e));assert.throws(()=>P.validateEvent({...e,event:'anything'}));assert.throws(()=>P.validateEvent({...e,visitor:'bad'}));
+const a=P.aggregate({},e,{newDay:true,isNew:true,newSession:true});assert.equal(a.visitors,1);assert.equal(a.newVisitors,1);assert.equal(a.sessions,1);
+const b=P.aggregate(a,e,{newDay:false,isNew:false,newSession:false});assert.equal(b.visitors,1);assert.equal(b.sessions,1);
+assert(!('contact' in P.feedbackView({kind:'crowd',contact:'private'})));
+const now=Date.parse('2026-11-18T17:00:00Z'),d={dataState:'live',sourceUpdated:new Date(now).toISOString(),forecast:{points:Array.from({length:25},(_,i)=>({minutes:i*15,count:i===4?80:20}))}};
+const windows=M.thresholdWindows(d,now,{duration:60,period:'afternoon'});assert(windows.length>0);assert.equal(windows[0].peak,80);assert.equal(windows[0].average,28);assert.deepEqual(M.thresholdWindows({...d,dataState:'delayed'},now),[]);assert.deepEqual(M.thresholdWindows(d,now+300000),[]);
+console.log('Product launch tests passed');

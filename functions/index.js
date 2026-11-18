@@ -11,6 +11,8 @@ const A=require('./analytics');
 const S=require('./seasonal');
 const {health}=require('./health');
 const F=require('./feedback');
+const P=require('./product');
+const {getAuth}=require('firebase-admin/auth');
 const {createHash}=require('node:crypto');
 initializeApp();
 const db=getFirestore();
@@ -127,6 +129,8 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
   response.fresh=response.dataState==='live';
   response.lastSourceErrorAt=status.sourceErrorAt||null;
   response.sourceHealth=status.error?'fetch_failed':'ok';
+  // Do not expose collector internals or raw upstream error strings.
+  delete response.recountModel;delete response.error;delete response.lastMinuteId;
   response.ok=true; // A delayed response is valid JSON: render its warning, not an API error.
   // Normalize older persisted LEARNING states for widgets and the web client.
   if(response.dataState==='live'){
@@ -138,8 +142,8 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
   if(response.dataState==='delayed')response.warning='Source reading delayed; last known count only.';
   if(runtime.scheduledOpen&&!status.open)response.warning='Collector has not reported an open-hours reading. Displaying stale data status.';
   if(response.dataState==='offline')response.warning='Source unavailable; last known count is not reliable.';
-  if(status.error&&response.dataState!=='closed')response.warning=(response.warning||'')+' Last collection error: '+String(status.error).slice(0,160);
-  res.set('Cache-Control','no-store');
+  if(status.error&&response.dataState!=='closed')response.warning=(response.warning||'')+' Source fetch failed.';
+  res.set('Cache-Control','public, max-age=0, s-maxage=15');
   res.set('X-Content-Type-Options','nosniff');
   res.json(response);
  }catch(e){logger.error('GET status failed',e);res.status(503).set('Cache-Control','no-store').json({ok:false,error:'Backend could not read occupancy from Firestore. Check function logs and Firestore permissions.'});}
@@ -260,4 +264,46 @@ exports.submitFeedback=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:1
   if(!accepted)return res.status(429).json({ok:false,error:'Please wait before submitting again.'});
   return res.status(201).json({ok:true});
  }catch(e){logger.error('Feedback write failed');return res.status(503).json({ok:false,error:'Feedback unavailable. Try again later.'});}
+});
+
+// Optional first-party analytics. Accept only known event names, UUIDs and broad channels.
+// No IP address, exact URL, contact data or user preferences are stored.
+exports.recordProductEvent=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:15,maxInstances:2,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(req.method!=='POST')return res.status(405).json({ok:false});
+ if(req.get('origin')!=='https://climbtheknot.live'||req.get('host')===undefined)return res.status(403).json({ok:false});
+ if(!req.is('application/json')||(req.rawBody?.length||0)>1024)return res.status(400).json({ok:false});
+ let event;try{event=P.validateEvent(req.body);}catch{return res.status(400).json({ok:false});}
+ const now=new Date(),day=L.parts(now).day,visitor=createHash('sha256').update(event.visitor).digest('hex'),session=createHash('sha256').update(event.session).digest('hex');
+ const daily=db.collection('productDaily').doc(day),visitorRef=db.collection('productVisitors').doc(visitor),sessionRef=db.collection('productSessions').doc(session);
+ const quota=db.collection('productEventLimits').doc(day+'_'+visitor);
+ try{
+  const result=await db.runTransaction(async tx=>{
+   const [q,v,s,d]=await Promise.all([tx.get(quota),tx.get(visitorRef),tx.get(sessionRef),tx.get(daily)]);
+   const limits=q.data()||{},current=d.data()||{},previous=v.data()||{};
+   if((limits.total||0)>=100||(current.accepted||0)>=20000)return false;
+   // Count a session only once. Deduplicate page_view for the same session.
+   if(s.exists&&s.data().visitor!==visitor)return false;
+   if(s.exists&&event.event==='page_view'&&s.data().pageView)return false;
+   const isNew=!v.exists,newDay=previous.lastDay!==day,newSession=!s.exists;
+   const next=P.aggregate(current,event,{isNew,newDay,newSession,returning:!isNew&&newDay&&previous.firstDay!==day});
+   tx.set(daily,next);
+   tx.set(visitorRef,{firstDay:previous.firstDay||day,lastDay:day,activeDays:(previous.activeDays||0)+(newDay?1:0),expiresAt:new Date(now.getTime()+90*86400000)});
+   tx.set(sessionRef,{visitor,day,pageView:event.event==='page_view'||!!s.data()?.pageView,expiresAt:new Date(now.getTime()+7*86400000)});
+   tx.set(quota,{total:(limits.total||0)+1,expiresAt:new Date(now.getTime()+2*86400000)});
+   return true;
+  });return res.status(result?201:429).json({ok:result});
+ }catch(e){logger.error('Product analytics write failed');return res.status(503).json({ok:false});}
+});
+exports.getAdminDashboard=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,maxInstances:2,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
+ res.set('Cache-Control','no-store').set('X-Content-Type-Options','nosniff');
+ if(req.method!=='GET')return res.status(405).json({ok:false});
+ const token=(req.get('Authorization')||'').match(/^Bearer (.+)$/)?.[1];
+ if(!token)return res.status(401).json({ok:false,error:'Sign in first.'});
+ try{const decoded=await getAuth().verifyIdToken(token,true);if(decoded.admin!==true)return res.status(403).json({ok:false,error:'Administrator access required.'});}
+ catch{return res.status(401).json({ok:false,error:'Invalid or expired session.'});}
+ try{
+  const [daily,feedback,scores,current]=await Promise.all([db.collection('productDaily').orderBy(FieldPath.documentId(),'desc').limit(30).get(),db.collection('memberFeedback').orderBy('createdAt','desc').limit(50).get(),db.collection('forecastScores').orderBy(FieldPath.documentId(),'desc').limit(14).get(),STATUS.get()]);
+  return res.json({ok:true,daily:daily.docs.map(d=>({date:d.id,...d.data()})),feedback:feedback.docs.map(d=>P.feedbackView(d.data())),scores:scores.docs.map(d=>({date:d.id,...d.data()})),health:health(current.data()||{})});
+ }catch(e){logger.error('Admin dashboard read failed');return res.status(503).json({ok:false,error:'Unable to load dashboard.'});}
 });
