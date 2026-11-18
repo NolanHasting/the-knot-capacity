@@ -130,8 +130,9 @@ $('heatmap').addEventListener('pointerover',e=>{
 function renderQuieterLater(d){
  const result=window.KnotExperience?.quieterLater(d);
  const clock=m=>{const h=Math.floor(m/60);return (h%12||12)+(m%60?':'+String(m%60).padStart(2,'0'):'')+' '+(h<12?'AM':'PM');};
- $('bestQuick').textContent=result?.state==='recommended'?clock(result.start):'—';
- $('bestQuickNote').textContent=result?.state==='recommended'?'About '+result.average+' people for the next hour':d?.dataState==='closed'?'Closed today':result?.state==='not_quieter'?'No quieter hour expected':result?.state==='no_window'?'No later hour available':'Forecast unavailable';
+ const closed=d?.dataState==='closed',recommended=result?.state==='recommended',now=result?.state==='not_quieter';
+ $('bestQuick').textContent=recommended?clock(result.start):now?'Now':closed?'Closed':result?.state==='no_window'?'No later slot':'Unavailable';
+ $('bestQuickNote').textContent=recommended?'About '+result.average+' people for one hour':now?'No meaningfully quieter hour forecast'+(Number.isFinite(result.average)?' · later low ~'+result.average:''):closed?'Check tomorrow’s forecast':result?.state==='no_window'?'Not enough time before closing':'Waiting for a fresh forecast';
 }
 function render(d){
  lastData=d;window.dispatchEvent(new CustomEvent('knot:status',{detail:d}));
@@ -166,7 +167,7 @@ function errorState(message){
  $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
  $('status').textContent='Offline';$('status').style.color='#ff6767';$('count').textContent='—';
  $('open').textContent='Data unavailable';$('trend').textContent='—';$('fill').style.width='0%';
- $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='—';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
+ $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
  $('updated').textContent='—';$('capacity').textContent='—';
  $('dayNote').textContent='Data unavailable.';clearChart('Unable to load counts.');
  $('besttimes').innerHTML='<div class="fine">No current recommendations.</div>';

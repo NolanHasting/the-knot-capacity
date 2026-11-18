@@ -43,7 +43,7 @@ assert.equal(later.average,30);
 assert.ok(later.start> M.parts(now).minute);
 assert.equal(later.end-later.start,60);
 assert.ok(later.end<=M.close(M.parts(now).dow)-60);
-assert.equal(M.quieterLater({...quietForecast,count:20},now).state,'not_quieter');
+const notQuieter=M.quieterLater({...quietForecast,count:20},now);assert.equal(notQuieter.state,'not_quieter');assert.equal(notQuieter.average,30);
 assert.equal(M.quieterLater({...quietForecast,dataState:'delayed'},now).state,'unavailable');
 assert.equal(M.quieterLater(quietForecast,now+5*60000).state,'unavailable');
 const nearClose=Date.parse('2026-11-17T03:00:00Z');

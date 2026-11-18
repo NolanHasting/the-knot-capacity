@@ -2,8 +2,8 @@
 (()=>{
  const el=id=>document.getElementById(id),origin='https://climbtheknot.live/',production=location.origin===origin.slice(0,-1);
  const store={get(k){try{return localStorage.getItem(k);}catch{return null;}},set(k,v){try{localStorage.setItem(k,v);}catch{}},remove(k){try{localStorage.removeItem(k);}catch{}}};
- const msg=s=>el('toolStatus').textContent=s;
- let data=null,install=null,registration=null,session=null,visitor=null,ga=false,alerted=false;
+ let messageTimer;const msg=s=>{const n=el('toolStatus');n.textContent=s;n.hidden=false;clearTimeout(messageTimer);messageTimer=setTimeout(()=>n.hidden=true,6000);};
+ let data=null,snapshot=null,session=null,visitor=null,ga=false;
  const consent=el('analyticsConsent');consent.checked=store.get('knot-analytics-consent')==='yes';
  const today=()=>window.KnotExperience.parts(Date.now()).date;
  const gaId=window.KNOT_CONFIG?.ga4;
@@ -12,7 +12,6 @@
   visitor=store.get('knot-visitor')||crypto.randomUUID();store.set('knot-visitor',visitor);
   const last=store.get('knot-last-visit');try{const previous=JSON.parse(sessionStorage.getItem('knot-session')||'null');session=previous&&Date.now()-previous.at<1800000?previous.id:crypto.randomUUID();sessionStorage.setItem('knot-session',JSON.stringify({id:session,at:Date.now()}));}catch{session=crypto.randomUUID();}
   const returning=!!last;store.set('knot-last-visit',today());
-  el('visitWelcome').textContent=returning?'Welcome back. Make your next session count.':'Make checking the crowd part of your climbing routine.';
   if(!ga&&/^G-[A-Z0-9]+$/.test(gaId||'')){
    ga=true;window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments);};window.gtag('js',new Date());window.gtag('config',gaId,{send_page_view:false,allow_google_signals:false,allow_ad_personalization_signals:false});
    const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(gaId);document.head.append(s);
@@ -30,31 +29,44 @@
  consent.onchange=()=>{store.set('knot-analytics-consent',consent.checked?'yes':'no');if(consent.checked){if(gaId)window['ga-disable-'+gaId]=false;analyticsStart();}else{if(gaId)window['ga-disable-'+gaId]=true;visitor=session=null;store.remove('knot-visitor');store.remove('knot-last-visit');msg('Analytics disabled.');}};
  analyticsStart();
  el('resetLocal').onclick=()=>{for(const k of ['knot-climb-preferences','knot-analytics-consent','knot-visitor','knot-last-visit','knot-alert','knot-feedback-token'])store.remove(k);store.remove('knot-alert-at');try{sessionStorage.removeItem('knot-session');}catch{}location.reload();};
- if('serviceWorker'in navigator&&production)navigator.serviceWorker.register('/sw.js').then(r=>registration=r).catch(()=>{});
- window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();install=e;el('installApp').hidden=false;});
- el('installApp').onclick=async()=>{if(install){await install.prompt();install=null;el('installApp').hidden=true;window.knotEvent('install_prompt');}};
- function live(){return data?.dataState==='live'&&Number.isFinite(data.count)&&Date.now()-Date.parse(data.sourceUpdated)<=240000&&Date.now()>=Date.parse(data.sourceUpdated);}
- const timestamp=()=>new Date(data.sourceUpdated).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET';
- async function copy(s){if(navigator.clipboard)await navigator.clipboard.writeText(s);else throw Error('Clipboard not supported');}
- function image(overlay){
-  const c=document.createElement('canvas');c.width=1080;c.height=overlay?480:1080;const x=c.getContext('2d');
-  x.fillStyle='#121914';if(overlay){x.beginPath();x.roundRect(20,20,1040,440,48);x.fill();}else x.fillRect(0,0,c.width,c.height);
-  const label=(s,y,size=42,color='#d9e9dc',weight=500)=>{x.fillStyle=color;x.font=weight+' '+size+'px system-ui';x.fillText(s,70,y);};
-  label('KNOT CAPACITY',100,42,'#ffffff',700);label('REPORTED CROWD',165,32);
-  label(String(data.count),overlay?310:520,overlay?140:300,'#fff',750);
-  if(overlay){x.fillStyle='#9fd39b';x.font='600 42px system-ui';x.fillText(String(data.label||''),440,255);x.fillText(timestamp(),440,310);label('climbtheknot.live',405,38);}
-  else{label(String(data.label||''),610,56,'#9fd39b',650);label(data.trendLabel||'Reported count',680,38);const pts=(data.forecast?.points||[]).filter(p=>Number.isFinite(p.count));if(pts.length>1){const max=Math.max(100,...pts.map(p=>p.count));x.strokeStyle='#9fd39b';x.lineWidth=6;x.beginPath();pts.forEach((p,i)=>{const px=70+940*i/(pts.length-1),py=870-p.count/max*130;i?x.lineTo(px,py):x.moveTo(px,py);});x.stroke();}label(timestamp()+' • snapshot',960,35);label('climbtheknot.live',1020,42,'#fff',700);}
+ if('serviceWorker'in navigator&&production)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+ // Only one share action. Pre-render the image when status changes so native
+ // sharing and Clipboard writes can run directly inside the click gesture.
+ const link=origin+'?utm_source=share';
+ function usable(d){return d&&['live','delayed'].includes(d.dataState)&&Number.isFinite(d.count)&&Number.isFinite(Date.parse(d.sourceUpdated));}
+ function buildImage(d){
+  const c=document.createElement('canvas');c.width=900;c.height=720;const x=c.getContext('2d');
+  x.fillStyle='#111613';x.fillRect(0,0,900,720);
+  const write=(s,y,size,color='#e9eee9',weight=500)=>{x.fillStyle=color;x.font=weight+' '+size+'px system-ui';x.fillText(s,56,y);};
+  const stamp=new Date(d.sourceUpdated).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET';
+  write('THE KNOT',88,40,'#fff',750);write('REPORTED COUNT',156,30,'#afbdb1');
+  write(String(d.count),388,230,'#fff',750);
+  write(d.dataState==='live'?String(d.label||''): 'LAST KNOWN COUNT',470,40,d.dataState==='live'?(d.color||'#9fd39b'):'#f0c468',650);
+  write('Recorded '+stamp,540,28,'#bfc9bf');x.fillStyle='#353e36';x.fillRect(56,578,788,2);
+  write('climbtheknot.live',640,36,'#fff',650);write('Independent tracker · snapshot',684,24,'#bfc9bf');
   return new Promise(resolve=>c.toBlob(resolve,'image/png'));
  }
- function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
- async function share(overlay){if(!live()){msg('Live data is unavailable. Try again when the tracker is live.');return;}try{const blob=await image(overlay);if(!blob)throw Error('Image unavailable');const file=new File([blob],overlay?'knot-overlay.png':'knot-conditions.png',{type:'image/png'});if(!overlay&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Knot Capacity',text:'Reported '+data.count+' people · '+timestamp(),url:origin+'?utm_source=share'});}else download(blob,file.name);window.knotEvent(overlay?'overlay_saved':'share_initiated');msg(overlay?'Overlay saved.':'Snapshot ready.');}catch(e){if(e.name!=='AbortError')msg('Could not share. Try copying the link.');}}
- el('shareConditions').onclick=()=>share(false);el('saveOverlay').onclick=()=>share(true);
- el('copyLink').onclick=async()=>{try{await copy(origin+'?utm_source=share');msg('Link copied.');window.knotEvent('share_initiated');}catch{msg('Copy this link: '+origin);}};
- el('widgetGuide').onclick=()=>window.knotEvent('widget_guide_opened');
- el('crowdAlert').onclick=async()=>{if(store.get('knot-alert')==='yes'){store.remove('knot-alert');el('crowdAlert').textContent='Enable crowd alerts';msg('Crowd alerts disabled.');return;}if(!('Notification'in window)){msg('Notifications are not supported here. Try the installed app.');return;}const p=await Notification.requestPermission();if(p!=='granted'){msg('Notification permission not granted.');return;}store.set('knot-alert','yes');el('crowdAlert').textContent='Disable crowd alerts';msg('Alerts enabled while the tracker is open.');};
- if(store.get('knot-alert')==='yes')el('crowdAlert').textContent='Disable crowd alerts';
- window.addEventListener('knot:status',async e=>{data=e.detail;if(!live()||store.get('knot-alert')!=='yes')return;const limit=Number(el('climbLimit').value);if(data.count>limit+5)alerted=false;if(data.count>limit||alerted||Date.now()-Number(store.get('knot-alert-at')||0)<3600000)return;if(!('Notification'in window)||Notification.permission!=='granted')return;try{const title='Your time to climb',options={body:'Reported '+data.count+' people — within your preference.',tag:'knot-crowd'};if(registration)await registration.showNotification(title,options);else new Notification(title,options);alerted=true;store.set('knot-alert-at',String(Date.now()));}catch{}});
- el('calendarReminder').onclick=()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(17,0,0,0);const stamp=d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';const now=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';const value=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Knot Capacity//EN','BEGIN:VEVENT','UID:'+crypto.randomUUID()+'@climbtheknot.live','DTSTAMP:'+now,'DTSTART:'+stamp,'DURATION:PT15M','RRULE:FREQ=WEEKLY','SUMMARY:Check climbing conditions','URL:'+origin,'BEGIN:VALARM','TRIGGER:-PT15M','ACTION:DISPLAY','DESCRIPTION:Check Knot Capacity','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';download(new Blob([value],{type:'text/calendar'}),'climbing-reminder.ics');msg('Weekly reminder downloaded for tomorrow at 5 PM. Adjust in your calendar.');window.knotEvent('reminder_saved');};
+ window.addEventListener('knot:status',e=>{data=e.detail;snapshot=null;if(usable(data)){const current=data;snapshot=buildImage(current).then(blob=>blob?{blob,reading:current}:null).catch(()=>null);}});
+ function download(blob){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='knot-conditions.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ async function share(){
+  const current=data,prepared=snapshot;let img=null;
+  if(prepared&&usable(current))img=await prepared;
+  const reading=img?.reading,stamp=reading?new Date(reading.sourceUpdated).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET':'';
+  const text=reading?'The Knot: '+reading.count+' reported people · '+stamp:'Check the crowd at The Knot';
+  const payload={title:'Knot Capacity',text,url:link},file=img?new File([img.blob],'knot-conditions.png',{type:'image/png'}):null;
+  try{
+   if(file&&navigator.canShare?.({...payload,files:[file]})){await navigator.share({...payload,files:[file]});msg('Conditions shared.');}
+   else if(file&&navigator.clipboard?.write&&typeof ClipboardItem!=='undefined'){
+    try{await navigator.clipboard.write([new ClipboardItem({'image/png':img.blob,'text/plain':new Blob([text+' · '+link],{type:'text/plain'})})]);msg('Image and link copied. Paste into your chat.');}
+    catch{try{await navigator.clipboard.write([new ClipboardItem({'image/png':img.blob})]);msg('Image copied. The tracker link is printed on it.');}catch{download(img.blob);msg('Image saved. Link: '+link);}}
+   }else if(navigator.share){if(file)download(img.blob);await navigator.share(payload);msg(file?'Image saved and link shared.':'Link shared.');}
+   else if(navigator.clipboard?.writeText){if(file)download(img.blob);await navigator.clipboard.writeText(link);msg(file?'Image saved and link copied.':'Link copied.');}
+   else{if(file)download(img.blob);msg('Share this link: '+link);}
+   window.knotEvent('share_initiated');
+  }catch(e){if(e.name!=='AbortError'){if(file)download(img.blob);msg('Share this link: '+link);}}
+ }
+ el('shareConditions').onclick=share;
+ el('widgetGuide').addEventListener('click',()=>window.knotEvent('widget_guide_opened'));
  document.querySelectorAll('.launch-nav a').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.launch-nav a').forEach(n=>n.removeAttribute('aria-current'));a.setAttribute('aria-current','location');if(a.hasAttribute('data-trends'))document.querySelector('[data-tab="patterns"]').click();if(a.hasAttribute('data-plan'))document.querySelector('[data-tab="best"]').click();window.knotEvent(a.hasAttribute('data-plan')?'plan_view':a.hasAttribute('data-trends')?'trends_view':'navigation');}));
  el('historyDate').addEventListener('change',()=>window.knotEvent('history_date_selected'));el('heatmap').addEventListener('click',()=>window.knotEvent('heatmap_interaction'));
 })();

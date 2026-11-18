@@ -11,21 +11,26 @@
  const crowdName=n=>n<=25?'Quiet':n<=50?'Moderate':n<=75?'Busy':n<100?'Very busy':'At capacity';
  function windows(d){
   const settings=prefs(),now=Date.now(),today=M.thresholdWindows(d,now,settings);
-  const list=el('besttimes'),weekly=M.historyWindows(d?.heatmap,now,7,{...settings,preference:settings.threshold<=25?'quiet':settings.threshold<=50?'balanced':'social'});
+  const list=el('besttimes'),picks=M.pickWindows(today,settings.threshold,3);
   el('climbLimitValue').textContent=settings.threshold;
-  el('weeklyPreference').textContent='Suggested windows today · '+settings.duration+' min';
   list.replaceChildren();
   const add=(w,title)=>{
-   const item=node('div','');item.className='threshold-row '+(w.peak<=settings.threshold?'match':'');
-   const desc=node('div','');desc.append(node('strong',title),node('small',range(w)));
+   const match=w.peak<=settings.threshold,item=node('div','');item.className='threshold-row '+(match?'match':'');
+   const desc=node('div','');desc.append(node('strong',title));if(w.source==='history')desc.append(node('small',range(w)));
    const bar=node('div','');bar.className='threshold-track';const fill=node('i','');fill.style.width=Math.min(100,w.average)+'%';bar.append(fill);
-   const value=node('div','');value.className='window-count';value.append(node('strong',String(w.average)),node('small',w.source==='history'?'hourly avg. max '+w.peak:Number.isFinite(w.peak)?'peak '+w.peak:'hourly avg.'));
+   const value=node('div','');value.className='window-count';value.append(node('strong',String(w.average)),node('small',match?'Within limit':'Above limit'));
+   item.setAttribute('aria-label',title+', '+w.average+' average, '+w.peak+(w.source==='history'?' maximum hourly average':' forecast peak')+', '+(match?'within':'above')+' your limit');
    item.append(desc,bar,value);list.append(item);
   };
-  if(today.length){for(const w of today)add(w,w.peak<=settings.threshold?'Within preference':'Above preference');
-   if(!today.some(w=>w.peak<=settings.threshold))list.append(node('p','No full session meets your limit. Closest available: '+range(today.slice().sort((a,b)=>a.peak-b.peak||a.start-b.start)[0])+'.'));
-  }else list.append(node('p','No usable live forecast for today.'));
-  if(weekly.length){list.append(node('h3','Next seven days · historical suggestions'));for(const w of weekly)add(w,day(w));}
+  if(picks.length){
+   el('weeklyPreference').textContent=picks.some(w=>w.peak<=settings.threshold)?'Recommended today · '+settings.duration+' min':'Closest option today · '+settings.duration+' min';
+   for(const w of picks)add(w,range(w));
+  }else{
+   const weekly=M.historyWindows(d?.heatmap,now,7,settings),best=weekly.find(w=>w.peak<=settings.threshold)||weekly[0];
+   el('weeklyPreference').textContent='Next suggested session';
+   if(best)add(best,day(best)+' · historical');
+   else list.append(node('p','No forecast available for your session yet.'));
+  }
  }
  window.updateMemberExperience=d=>{
   latest=d;

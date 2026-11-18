@@ -114,7 +114,7 @@
   if(!candidates.length)return {state:'no_window'};
   const sorted=candidates.sort((a,b)=>a.score-b.score||a.start-b.start);
   const lower=sorted.filter(w=>w.average<=d.count-3);
-  if(!lower.length)return {state:'not_quieter'};
+  if(!lower.length)return {state:'not_quieter',...sorted[0]};
   const best=lower[0],selected=lower.filter(x=>x.score<=best.score+2).sort((a,b)=>a.start-b.start)[0];
   return {state:'recommended',...selected};
  }
@@ -133,5 +133,16 @@
   }
   return windows;
  }
- return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater,thresholdWindows};
+ // Limit the planner to distinct, non-overlapping sessions. If none meet
+ // the peak threshold, show one closest alternative rather than a long list.
+ function pickWindows(windows,limit,max=3){
+  const rows=(windows||[]).filter(w=>finite(w.average)&&finite(w.peak)&&finite(w.start)&&finite(w.end));
+  const ranked=rows.slice().sort((a,b)=>a.average-b.average||a.peak-b.peak||a.start-b.start);
+  const matches=ranked.filter(w=>w.peak<=limit);
+  if(!matches.length)return rows.sort((a,b)=>a.peak-b.peak||a.average-b.average||a.start-b.start).slice(0,1);
+  const selected=[];
+  for(const w of matches){if(selected.every(p=>w.end<=p.start||w.start>=p.end))selected.push(w);if(selected.length>=max)break;}
+  return selected.sort((a,b)=>a.start-b.start);
+ }
+ return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater,thresholdWindows,pickWindows};
 });
