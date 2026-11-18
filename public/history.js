@@ -86,7 +86,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    for(let i=0;i<source.length;i+=Math.max(1,Math.ceil(source.length/130))){
     const p=source[i];
     if(!Number.isFinite(p.count)||!Number.isFinite(p.minute))continue;
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" tabindex="-1" data-time="'+p.minute+'" data-kind="reported" role="button" aria-label="'+safe(tick(p.minute)+': '+p.count+' reported')+'" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" data-time="'+p.minute+'" data-kind="reported" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
    }
   }
   if(!isFuture){
@@ -94,14 +94,14 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
     if(!Number.isFinite(event.count)||!Number.isFinite(Date.parse(event.timestamp)))continue;
     const mx=x(localMinute(event.timestamp)),my=y(event.count);
     const info='Inferred recount · '+tick(localMinute(event.timestamp))+' · '+event.count+' reported · down '+event.drop;
-    html+='<path d="M'+mx+' '+(my-6)+' l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>'+safe(info)+'</title></path>';
-    html+='<circle class="chart-point" cx="'+mx+'" cy="'+my+'" r="'+(mobile?12:10)+'" fill="transparent" tabindex="-1" data-time="'+localMinute(event.timestamp)+'" data-kind="recount" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"/>';
+    html+='<path d="M'+mx+' '+(my-6)+' l6 6 -6 6 -6 -6 Z" class="recount-mark" stroke="#111" stroke-width="1.5"><title>'+safe(info)+'</title></path>';
+    html+='<circle class="chart-point" cx="'+mx+'" cy="'+my+'" r="'+(mobile?12:10)+'" fill="transparent" data-time="'+localMinute(event.timestamp)+'" data-kind="recount" data-info="'+safe(info)+'"/>';
    }
   }
   if(isFuture){
    for(const p of observed){
     const info=tick(p.minute)+': '+p.count+(p.assumedClose?' at closing':' forecast');
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" tabindex="-1" data-time="'+p.minute+'" data-kind="forecast" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" data-time="'+p.minute+'" data-kind="forecast" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
    }
   }
   setGraph(html);

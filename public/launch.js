@@ -75,9 +75,16 @@
   else analyticsStop();
  });
  analyticsStart();
+ const motion=el('motionPreference'),motionKey='knot-reduce-motion';
+ motion.checked=store.get(motionKey)==='yes';
+ document.body.classList.toggle('motion-reduced',motion.checked);
+ motion.addEventListener('change',()=>{
+  store.set(motionKey,motion.checked?'yes':'no');
+  document.body.classList.toggle('motion-reduced',motion.checked);
+ });
  el('resetLocal').onclick=()=>{
   analyticsStop();
-  for(const key of ['knot-climb-preferences',consentKey,'knot-alert','knot-feedback-token','knot-alert-at'])store.remove(key);
+  for(const key of ['knot-climb-preferences',consentKey,motionKey,'knot-alert','knot-feedback-token','knot-alert-at'])store.remove(key);
   location.reload();
  };
  if('serviceWorker'in navigator&&production)navigator.serviceWorker.register('/sw.js').catch(()=>{});

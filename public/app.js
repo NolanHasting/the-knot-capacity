@@ -37,7 +37,7 @@ function dayChart(d){
   if(!Number.isFinite(ts)||!Number.isFinite(event.count))continue;
   const cx=x(ts).toFixed(2),cy=y(event.count).toFixed(2);
   const info='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
-  shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
+  shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" class="recount-mark" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
  }
  if(projected.length>1){
   const line=projected.map((p,i)=>(i?'L':'M')+x(p.ts).toFixed(2)+' '+y(p.count).toFixed(2)).join(' ');
@@ -69,21 +69,21 @@ function dayChart(d){
   const p=history[i],ts=Date.parse(p.timestamp);
   if(showNow&&ts===nowTs)continue;
   const label=time(p.timestamp)+': '+p.count+' reported';
-  markers.push('<circle class="chart-point" cx="'+x(ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" tabindex="-1" data-time="'+ts+'" data-kind="reported" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" data-time="'+ts+'" data-kind="reported" data-info="'+esc(label)+'"/>');
  }
  for(const p of projected){
   if(!Number.isFinite(p.count)||showNow&&p.ts===nowTs)continue;
   const label=time(new Date(p.ts).toISOString())+': '+p.count+' forecast'+(Number.isFinite(p.low)&&Number.isFinite(p.high)?' · range '+p.low+'–'+p.high:'');
-  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" tabindex="-1" data-time="'+p.ts+'" data-kind="forecast" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" data-time="'+p.ts+'" data-kind="forecast" data-info="'+esc(label)+'"/>');
  }
  for(const event of (d.recounts||[])){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
   const label='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
-  markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" tabindex="-1" data-time="'+Date.parse(event.timestamp)+'" data-kind="recount" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" data-time="'+Date.parse(event.timestamp)+'" data-kind="recount" data-info="'+esc(label)+'"/>');
  }
  if(showNow){
   const label=time(d.sourceUpdated||d.updated)+': '+d.count+' reported now';
-  markers.push(`<circle class="chart-point" cx="${x(nowTs)}" cy="${y(d.count)}" r="12" fill="transparent" tabindex="-1" data-time="${nowTs}" data-kind="now" role="button" aria-label="${esc(label)}" data-info="${esc(label)}"/>`);
+  markers.push(`<circle class="chart-point" cx="${x(nowTs)}" cy="${y(d.count)}" r="12" fill="transparent" data-time="${nowTs}" data-kind="now" data-info="${esc(label)}"/>`);
  }
  setDayChart(marks+shapes+markers.join('')+ticks.join(''));
  $('forecastType').textContent=projected.length?'Reported + forecast':'Reported counts';
@@ -181,7 +181,7 @@ function renderCount(value){
  const box=count.parentElement;
  box.querySelector('.count-outgoing')?.remove();
  count.textContent=next;
- if(reduceMotion.matches||!count.animate||!/^[0-9]+$/.test(old)||!/^[0-9]+$/.test(next))return;
+ if(reduceMotion.matches||document.body.classList.contains('motion-reduced')||!count.animate||!/^[0-9]+$/.test(old)||!/^[0-9]+$/.test(next))return;
  const direction=Number(next)>Number(old)?1:-1;
  const outgoing=document.createElement('span');
  outgoing.className='big count-outgoing';
@@ -198,17 +198,18 @@ function render(d){
 
  const state=d.dataState||'offline',live=state==='live',delayed=state==='delayed',closed=state==='closed';
  const color=d.color||'#70e6a2';
- const connection=({live:'Live',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
+ const connection=({live:'Open now',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
  if($('connection').textContent!==connection)$('connection').textContent=connection;$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
+ $('liveDot').dataset.state=state;
  renderCount(closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count);
  $('status').textContent=live?({GREAT:'Quiet',GOOD:'Moderate',BAD:'Very busy',QUIET:'Quiet',MODERATE:'Moderate',BUSY:'Busy','VERY BUSY':'Very busy','AT CAPACITY':'At capacity'}[d.label]||''):'';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
- $('open').textContent=closed?'Outside regular hours':live?'People reported':delayed?'Last reported count':'Count unavailable';
+ $('open').textContent=closed?'Outside regular hours':live?'':delayed?'Last reported count':'Count unavailable';
  const movement=live?(d.trend==='rising'?['↑','Getting busier']:d.trend==='falling'?['↓','Getting quieter']:['→','Steady']):null;
  $('trend').textContent=movement?movement[0]+' '+movement[1]:'No live trend';
  $('trend').style.color=live?'#fff':'#aaa';
  $('fill').style.width=closed||state==='offline'||!Number.isFinite(d.percent)?'0%':Math.min(100,d.percent)+'%';$('fill').style.background=color;
- $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'—';
+ $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'Capacity unavailable';
  $('updated').textContent=d.sourceUpdated?'Updated '+time(d.sourceUpdated)+' ET':'No reading received';
  const change=live?d.reportedChange30:null;
  $('rate').textContent=change&&Number.isFinite(change.change)?(change.change>0?'+':'')+change.change:'—';
@@ -228,10 +229,11 @@ function errorState(message){
  lastData=null;window.dispatchEvent(new CustomEvent('knot:status',{detail:null}));
  window.updateMemberExperience?.(null);
  $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
+ $('liveDot').dataset.state='offline';
  $('status').textContent='';$('status').style.color='#ff6767';renderCount('—');
  $('open').textContent='Count unavailable';$('trend').textContent='No live trend';$('fill').style.width='0%';
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
- $('updated').textContent='—';$('capacity').textContent='—';
+ $('updated').textContent='No reading received';$('capacity').textContent='Capacity unavailable';
  if(!$('heatmap').children.length)renderHeat([]);
 }
 async function refresh(){

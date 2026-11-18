@@ -49,24 +49,25 @@
  <div class="hero">
   <article class="panel current-panel" aria-labelledby="count-heading">
    <div class="count-top">
-    <h2 id="count-heading">Crowd now</h2>
+    <h2 id="count-heading">Reported now</h2>
     <div class="connection" role="status"><i id="liveDot" class="dot" aria-hidden="true"></i><span id="connection">Connecting</span></div>
    </div>
    <div class="count-reading">
     <span class="counter-window"><span class="big" id="count">—</span></span>
-    <div class="reading-text"><span id="open">Waiting for a reading</span><strong id="status"></strong><span class="crowd-direction" id="trend"></span></div>
+   </div>
+   <p class="fine reading-caption" id="open"></p>
+   <div class="crowd-state"><strong id="status"></strong><span class="crowd-direction" id="trend"></span></div>
+   <div class="capacity-meter">
+    <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
    </div>
    <div class="reading-meta">
-    <span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button>
+    <span id="capacity">—</span>
+    <div class="reading-update"><span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button></div>
    </div>
-   <div class="reading-details">
-    <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
-    <p class="fine" id="capacity">—</p>
     <dl class="count-context">
-     <div><dt>Last inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>
+     <div><dt>Inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>
      <div><dt>Adjusted estimate</dt><dd><strong id="estimateNow">—</strong><small id="estimateNote"></small></dd></div>
     </dl>
-   </div>
   </article>
   <article class="panel outlook-panel" aria-labelledby="outlook-heading">
    <div class="count-top"><h2 id="outlook-heading">Crowd outlook</h2><span id="hoursNow" class="fine">Regular hours</span></div>
@@ -98,13 +99,12 @@
    <div id="historySummary" class="history-summary" aria-live="polite">Today</div>
    <span id="forecastType"></span>
   </div>
-  <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="group" tabindex="-1" aria-label="Crowd by time on the selected date" aria-describedby="chart-help"></svg></div>
+  <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="img" aria-label="Crowd by time on the selected date" aria-describedby="dayNote"></svg></div>
   <div class="legend" aria-label="Chart legend">
    <span data-series="reported"><i></i>Reported</span><span data-series="forecast"><i class="forecast"></i>Forecast</span><span data-series="range"><i class="band"></i>Estimated range</span><span data-series="recounts"><i class="recount"></i>Recount</span>
   </div>
   <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
   <p class="chartnote" id="dayNote"></p>
-  <p class="fine chart-help" id="chart-help">Use the left and right arrow keys to move between chart points.</p>
  </article>
 </section>
 
@@ -156,6 +156,7 @@
   <summary>Privacy &amp; settings</summary>
   <p>Climbing preferences stay on this device. Optional analytics, including Google Analytics, use browser identifiers to count visits and feature use. You can turn analytics off anytime.</p>
   <label><input type="checkbox" id="analyticsConsent"> Allow optional usage analytics</label>
+  <label><input type="checkbox" id="motionPreference"> Reduce motion</label>
   <button type="button" class="refresh" id="resetLocal">Clear local settings</button>
  </details>
 </div>

@@ -1,49 +1,26 @@
 'use strict';
 
-// Give each chart one Tab stop and keep its position when a new reading arrives.
+// Keep the selected reading visible when the chart refreshes.
 function bindChartPoints(chart, detail){
- let points=[],active=null,inspected=false;
+ let selected=null;
  const instructions=detail.textContent;
  function show(point){
-  if(active!==point){
-   active?.setAttribute('tabindex','-1');
-   point.setAttribute('tabindex','0');
-   active=point;
-  }
+  selected={time:point.dataset.time,kind:point.dataset.kind};
   if(detail.textContent!==point.dataset.info)detail.textContent=point.dataset.info;
  }
- function inspect(event){
+ chart.addEventListener('click',event=>{
   const point=event.target.closest?.('.chart-point');
-  if(point){inspected=true;show(point);}
- }
- chart.addEventListener('focusin',inspect);
- chart.addEventListener('click',inspect);
- chart.addEventListener('keydown',event=>{
-  const i=points.indexOf(event.target);
-  if(i<0)return;
-  const next={ArrowLeft:i-1,ArrowRight:i+1,Home:0,End:points.length-1}[event.key];
-  if(Number.isInteger(next)){
-   event.preventDefault();
-   points[Math.max(0,Math.min(next,points.length-1))].focus();
-  }else if(event.key==='Enter'||event.key===' '){
-   event.preventDefault();
-   show(event.target);
-  }
+  if(point)show(point);
  });
  return (markup,{reset=false}={})=>{
-  const focused=chart.contains(document.activeElement);
-  if(reset)inspected=false;
-  const previous=inspected?active?.dataset:null;
+  if(reset)selected=null;
   chart.innerHTML=markup;
-  points=[...chart.querySelectorAll('.chart-point')].sort((a,b)=>Number(a.dataset.time)-Number(b.dataset.time));
-  active=previous&&points.find(p=>p.dataset.time===previous.time&&p.dataset.kind===previous.kind);
-  if(!active&&previous&&points.length){
-   active=points.reduce((best,point)=>Math.abs(point.dataset.time-previous.time)<Math.abs(best.dataset.time-previous.time)?point:best);
+  if(selected){
+   const points=[...chart.querySelectorAll('.chart-point')];
+   const point=points.find(p=>p.dataset.time===selected.time&&p.dataset.kind===selected.kind);
+   if(point){show(point);return;}
   }
-  active??=points[0];
-  active?.setAttribute('tabindex','0');
-  if(previous&&active)show(active);
-  else if(detail.textContent!==instructions)detail.textContent=instructions;
-  if(focused)(active||chart).focus({preventScroll:true});
+  selected=null;
+  if(detail.textContent!==instructions)detail.textContent=instructions;
  };
 }

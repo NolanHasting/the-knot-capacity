@@ -2,6 +2,7 @@
   --surface: #000;
   --surface-raised: #141414;
   --divider: #414141;
+  --panel-edge: #707070;
   --text: #fff;
   --secondary: #c4c4c4;
   --sage: #9fd39b;
@@ -65,7 +66,7 @@
 .tracker-section > h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); margin-bottom: 12px; }
 .tracker .panel {
   background: var(--surface);
-  border: 1px solid var(--divider);
+  border: 2px solid var(--panel-edge);
   border-radius: 14px;
   padding: clamp(14px, 2.5vw, 24px);
 }
@@ -91,54 +92,72 @@
 .tracker .connection { gap: 6px; font-size: .8125rem; letter-spacing: 0; }
 .count-reading {
   display: flex;
-  align-items: center;
-  gap: 18px;
-  margin: 8px 0 4px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 14px 0 10px;
+  color: var(--secondary);
 }
 .counter-window {
-  position: relative;
-  display: inline-block;
+  display: inline-grid;
   overflow: hidden;
   flex-shrink: 0;
 }
 .count-reading .big {
-  display: block;
+  grid-area: 1 / 1;
+  padding-inline: .02em .09em;
   color: var(--text);
   font-size: clamp(4.25rem, 10vw, 6.25rem);
   min-height: 0;
   line-height: 1;
   font-weight: 760;
 }
-.count-outgoing { position: absolute; inset: 0 auto auto 0; pointer-events: none; }
-.crowd-direction { font-size: .85rem; }
-.reading-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  color: var(--secondary);
-  font-size: .9375rem;
+.count-outgoing { pointer-events: none; }
+.crowd-state {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  min-height: 1.5rem;
 }
+.current-panel .count-top h2 { color: var(--secondary); }
+.reading-caption { margin: 0 0 6px; }
+.reading-caption:empty { display: none; }
+.crowd-direction { font-size: .9375rem; font-weight: 650; }
+.status:not(:empty) + .crowd-direction { border-inline-start: 1px solid var(--divider); padding-inline-start: 14px; }
+.capacity-meter { margin: 22px 0 4px; }
+.tracker .capacity-meter .track {
+  height: 8px;
+  margin: 0;
+  background: #343434;
+  border: 0;
+}
+.capacity-meter .fill { border-radius: inherit; }
 .tracker .status { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .tracker .status:empty { display: none; }
 .reading-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 0 8px;
   color: var(--secondary);
   font-size: .875rem;
 }
+.reading-update { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-inline-start: auto; }
 .reading-meta .refresh { background: transparent; border-color: transparent; color: var(--text); padding-inline: 9px; }
 .reading-meta .refresh:hover { border-color: #777; }
-.reading-details { border-top: 1px solid var(--divider); margin-top: 6px; }
 .tracker summary { color: var(--text); cursor: pointer; }
 .planner-options summary,
 .lower-detail > summary { min-height: 44px; padding-block: 10px; }
 .planner-options summary { color: var(--secondary); font-size: .875rem; }
-.reading-details > .fine { margin: 3px 0 0; }
-.reading-details .track { margin-top: 10px; }
-.reading-details .count-context { border: 0; padding: 0; margin: 8px 0 0; }
-.count-context dt { color: var(--secondary); font-size: .85rem; }
+.current-panel .count-context {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  padding-top: 12px;
+  margin: 6px 0 0;
+}
+.count-context dt { color: var(--secondary); font-size: .875rem; font-weight: 650; }
+.current-panel .count-context strong { margin: 2px 0 0; font-size: 1.25rem; }
 .count-context dd { margin: 0; }
 .count-context small:empty { display: none; }
 
@@ -192,7 +211,7 @@
 .threshold-row.match .threshold-track i { background: var(--sage); }
 
 .tracker .history-toolbar { align-items: end; }
-.tracker .timeline-panel .charthead { margin-top: 16px; align-items: baseline; }
+.tracker .timeline-panel .charthead { margin-top: 12px; min-height: 44px; align-items: center; }
 .tracker .timeline-panel .history-summary { margin-top: 0; }
 .tracker .legend [hidden] { display: none; }
 .tracker .legend i.forecast { background: repeating-linear-gradient(90deg,#f0c468 0 4px,transparent 4px 7px); }
@@ -201,8 +220,19 @@
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
-  animation: live-chart-pulse 1.65s ease-out 2;
+  animation: live-chart-pulse 1.8s ease-out infinite;
 }
+#liveDot { position: relative; }
+#liveDot[data-state="live"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--good);
+  animation: live-chart-pulse 1.8s ease-out infinite;
+}
+.motion-reduced .now-pulse,
+.motion-reduced #liveDot::after { animation: none; }
 @keyframes live-chart-pulse {
   from { transform: scale(1); opacity: .55; }
   to { transform: scale(2.45); opacity: 0; }
@@ -210,7 +240,6 @@
 .tracker .chart { min-width: 0; }
 .tracker .chartnote { min-height: 0; margin: 5px 0 0; }
 .tracker .graph-selection { margin-bottom: 0; }
-.tracker .chart-help { margin: 5px 0 0; }
 .tracker .heat-detail {
   background: #141414;
   border-color: var(--divider);
@@ -245,12 +274,24 @@
 .share-status[hidden] { display: none; }
 .share-status a { color: #9fd39b; }
 
-#adminData article { overflow: auto; margin: 16px 0; }
+#adminData article { margin: 16px 0; }
+.admin-table-scroll { overflow: auto; }
+.admin-table-scroll:focus-visible { outline: 3px solid #b4e2bc; outline-offset: 3px; }
 #adminData table { border-collapse: collapse; width: 100%; font-size: 13px; }
 #adminData td, #adminData th { padding: 8px; text-align: left; border-bottom: 1px solid #333; }
 #adminData pre { white-space: pre-wrap; }
 #login:not([hidden]) { display: grid; gap: 12px; }
-#login input { display: block; width: 100%; }
+#login input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #777;
+  border-radius: 8px;
+  background: #090909;
+  color: #fff;
+  font: inherit;
+}
 
 @media (max-width: 700px) {
   .tracker .hero,
@@ -275,4 +316,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .tracker *, .tracker *::before, .tracker *::after { transition: none !important; animation: none !important; }
+}
+
+@media (forced-colors: active) {
+  .tracker .capacity-meter .track { border: 1px solid CanvasText; }
+  .tracker .capacity-meter .fill { background: Highlight !important; forced-color-adjust: none; }
+  .recount-mark { fill: LinkText; }
 }
