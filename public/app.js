@@ -4,7 +4,7 @@ let busy=false,lastData=null;
 function time(s){return s?new Date(s).toLocaleTimeString([],{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'—';}
 function hourLabel(h){return (h%12||12)+':00 '+(h<12?'AM':'PM');}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-const setDayChart=bindChartPoints($('dayChart'),$('daySelection'));
+const setDayChart=bindChartPoints($('dayChart'),$('daySelection'),$('chartPrevious'),$('chartNext'));
 const svg=(name,attr)=>`<${name} ${attr}/>`;
 function clearChart(text){setDayChart('<text x="45" y="125" fill="#bfbfbf" font-size="13">'+esc(text)+'</text>',{reset:true});}
 function dayChart(d){
@@ -37,7 +37,7 @@ function dayChart(d){
   if(!Number.isFinite(ts)||!Number.isFinite(event.count))continue;
   const cx=x(ts).toFixed(2),cy=y(event.count).toFixed(2);
   const info='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
-  shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" fill="#9FD39B" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
+  shapes+=`<path d="M${cx} ${(Number(cy)-6).toFixed(2)} l6 6 -6 6 -6 -6 Z" class="recount-mark" stroke="#111" stroke-width="1.5"><title>${esc(info)}</title></path>`;
  }
  if(projected.length>1){
   const line=projected.map((p,i)=>(i?'L':'M')+x(p.ts).toFixed(2)+' '+y(p.count).toFixed(2)).join(' ');
@@ -208,7 +208,7 @@ function render(d){
  $('trend').textContent=movement?movement[0]+' '+movement[1]:'No live trend';
  $('trend').style.color=live?'#fff':'#aaa';
  $('fill').style.width=closed||state==='offline'||!Number.isFinite(d.percent)?'0%':Math.min(100,d.percent)+'%';$('fill').style.background=color;
- $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'—';
+ $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'Capacity unavailable';
  $('updated').textContent=d.sourceUpdated?'Updated '+time(d.sourceUpdated)+' ET':'No reading received';
  const change=live?d.reportedChange30:null;
  $('rate').textContent=change&&Number.isFinite(change.change)?(change.change>0?'+':'')+change.change:'—';
@@ -231,7 +231,7 @@ function errorState(message){
  $('status').textContent='';$('status').style.color='#ff6767';renderCount('—');
  $('open').textContent='Count unavailable';$('trend').textContent='No live trend';$('fill').style.width='0%';
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
- $('updated').textContent='—';$('capacity').textContent='—';
+ $('updated').textContent='No reading received';$('capacity').textContent='Capacity unavailable';
  if(!$('heatmap').children.length)renderHeat([]);
 }
 async function refresh(){

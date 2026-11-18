@@ -43,8 +43,8 @@
  window.updateMemberExperience=d=>{
   latest=d;
   const ctx=M.liveContext(d),r=ctx.recount,e=ctx.estimate;
-  el('recountNow').textContent=r?r.count+' · '+time.format(new Date(r.timestamp)):'—';
-  el('recountNote').textContent=r?'From a drop in the reported count':'';
+  el('recountNow').textContent=r?r.count:'—';
+  el('recountNote').textContent=r?time.format(new Date(r.timestamp))+' ET':'';
   el('estimateNow').textContent=e?e.count:'—';
   el('estimateNote').textContent=e?'Accounts for departures':'';
   el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';

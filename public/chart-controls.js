@@ -1,9 +1,20 @@
 'use strict';
 
 // Give each chart one Tab stop and keep its position when a new reading arrives.
-function bindChartPoints(chart, detail){
+function bindChartPoints(chart, detail, previousButton, nextButton){
  let points=[],active=null,inspected=false;
  const instructions=detail.textContent;
+ function updateButtons(){
+  const index=points.indexOf(active);
+  previousButton.setAttribute('aria-disabled',String(index<=0));
+  nextButton.setAttribute('aria-disabled',String(index<0||index===points.length-1));
+ }
+ function move(step){
+  const index=points.indexOf(active)+step;
+  if(index>=0&&index<points.length){inspected=true;show(points[index]);}
+ }
+ previousButton.addEventListener('click',()=>move(-1));
+ nextButton.addEventListener('click',()=>move(1));
  function show(point){
   if(active!==point){
    active?.setAttribute('tabindex','-1');
@@ -11,6 +22,7 @@ function bindChartPoints(chart, detail){
    active=point;
   }
   if(detail.textContent!==point.dataset.info)detail.textContent=point.dataset.info;
+  updateButtons();
  }
  function inspect(event){
   const point=event.target.closest?.('.chart-point');
@@ -42,6 +54,7 @@ function bindChartPoints(chart, detail){
   }
   active??=points[0];
   active?.setAttribute('tabindex','0');
+  updateButtons();
   if(previous&&active)show(active);
   else if(detail.textContent!==instructions)detail.textContent=instructions;
   if(focused)(active||chart).focus({preventScroll:true});

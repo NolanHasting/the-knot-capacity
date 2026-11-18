@@ -54,19 +54,20 @@
    </div>
    <div class="count-reading">
     <span class="counter-window"><span class="big" id="count">—</span></span>
-    <div class="reading-text"><span id="open">Waiting for a reading</span><strong id="status"></strong><span class="crowd-direction" id="trend"></span></div>
+    <span id="open">Waiting for a reading</span>
+   </div>
+   <div class="crowd-state"><strong id="status"></strong><span class="crowd-direction" id="trend"></span></div>
+   <div class="capacity-meter">
+    <p class="fine" id="capacity">—</p>
+    <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
    </div>
    <div class="reading-meta">
     <span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button>
    </div>
-   <div class="reading-details">
-    <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
-    <p class="fine" id="capacity">—</p>
     <dl class="count-context">
-     <div><dt>Last inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>
+     <div><dt>Inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>
      <div><dt>Adjusted estimate</dt><dd><strong id="estimateNow">—</strong><small id="estimateNote"></small></dd></div>
     </dl>
-   </div>
   </article>
   <article class="panel outlook-panel" aria-labelledby="outlook-heading">
    <div class="count-top"><h2 id="outlook-heading">Crowd outlook</h2><span id="hoursNow" class="fine">Regular hours</span></div>
@@ -96,13 +97,20 @@
   </div>
   <div class="charthead">
    <div id="historySummary" class="history-summary" aria-live="polite">Today</div>
-   <span id="forecastType"></span>
+   <div class="chart-options">
+    <span id="forecastType"></span>
+    <button class="refresh" id="chartMotion" type="button" aria-controls="dayChart" hidden>Pause pulse</button>
+   </div>
   </div>
   <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="group" tabindex="-1" aria-label="Crowd by time on the selected date" aria-describedby="chart-help"></svg></div>
   <div class="legend" aria-label="Chart legend">
    <span data-series="reported"><i></i>Reported</span><span data-series="forecast"><i class="forecast"></i>Forecast</span><span data-series="range"><i class="band"></i>Estimated range</span><span data-series="recounts"><i class="recount"></i>Recount</span>
   </div>
-  <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
+  <div class="chart-readings" role="group" aria-label="Browse chart readings">
+   <button class="refresh" id="chartPrevious" type="button" aria-label="Previous chart reading" aria-disabled="true">←</button>
+   <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
+   <button class="refresh" id="chartNext" type="button" aria-label="Next chart reading" aria-disabled="true">→</button>
+  </div>
   <p class="chartnote" id="dayNote"></p>
   <p class="fine chart-help" id="chart-help">Use the left and right arrow keys to move between chart points.</p>
  </article>
