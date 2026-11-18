@@ -53,7 +53,7 @@
   el('recountNow').textContent=r?r.count:'—';
   el('recountNote').textContent=r?time.format(new Date(r.timestamp))+' ET':'';
   if(e)lastEstimate=e;
-  el('estimateNow').textContent=lastEstimate?(lastEstimate.basis==='closed'?'0':'~'+lastEstimate.count):'—';
+  el('estimateNow').textContent=lastEstimate?(lastEstimate.basis==='closed'?'0':lastEstimate.count):'—';
   el('estimateNote').textContent=e?(estimateNotes[e.basis]||'Estimated occupancy'):
    (lastEstimate?'Showing the previous estimate':'Waiting for a count');
   el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';
