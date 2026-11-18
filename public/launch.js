@@ -10,7 +10,7 @@
  function analyticsStart(){
   if(!production||!consent.checked)return;
   visitor=store.get('knot-visitor')||crypto.randomUUID();store.set('knot-visitor',visitor);
-  const last=store.get('knot-last-visit');session=crypto.randomUUID();
+  const last=store.get('knot-last-visit');try{const previous=JSON.parse(sessionStorage.getItem('knot-session')||'null');session=previous&&Date.now()-previous.at<1800000?previous.id:crypto.randomUUID();sessionStorage.setItem('knot-session',JSON.stringify({id:session,at:Date.now()}));}catch{session=crypto.randomUUID();}
   const returning=!!last;store.set('knot-last-visit',today());
   el('visitWelcome').textContent=returning?'Welcome back. Make your next session count.':'Make checking the crowd part of your climbing routine.';
   if(!ga&&/^G-[A-Z0-9]+$/.test(gaId||'')){
@@ -21,14 +21,15 @@
  }
  window.knotEvent=(event)=>{
   if(!production||!consent.checked||!visitor||!session)return;
+  try{sessionStorage.setItem('knot-session',JSON.stringify({id:session,at:Date.now()}));}catch{}
   const source=new URLSearchParams(location.search).get('utm_source');
   const channel=source==='share'?'share':source==='print'?'print':source==='installed'?'installed':document.referrer&&new URL(document.referrer).origin!==location.origin?'referral':'direct';
   fetch('/api/event',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({event,visitor,session,channel})}).catch(()=>{});
-  if(ga)window.gtag('event',event,{channel});
+  if(ga)window.gtag('event',event,{channel,page_location:origin,page_referrer:''});
  };
  consent.onchange=()=>{store.set('knot-analytics-consent',consent.checked?'yes':'no');if(consent.checked){if(gaId)window['ga-disable-'+gaId]=false;analyticsStart();}else{if(gaId)window['ga-disable-'+gaId]=true;visitor=session=null;store.remove('knot-visitor');store.remove('knot-last-visit');msg('Analytics disabled.');}};
  analyticsStart();
- el('resetLocal').onclick=()=>{for(const k of ['knot-climb-preferences','knot-analytics-consent','knot-visitor','knot-last-visit','knot-alert','knot-feedback-token'])store.remove(k);location.reload();};
+ el('resetLocal').onclick=()=>{for(const k of ['knot-climb-preferences','knot-analytics-consent','knot-visitor','knot-last-visit','knot-alert','knot-feedback-token'])store.remove(k);store.remove('knot-alert-at');try{sessionStorage.removeItem('knot-session');}catch{}location.reload();};
  if('serviceWorker'in navigator&&production)navigator.serviceWorker.register('/sw.js').then(r=>registration=r).catch(()=>{});
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();install=e;el('installApp').hidden=false;});
  el('installApp').onclick=async()=>{if(install){await install.prompt();install=null;el('installApp').hidden=true;window.knotEvent('install_prompt');}};

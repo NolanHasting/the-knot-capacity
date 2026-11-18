@@ -69,8 +69,8 @@
      values.push(cell.average);supports.push(cell.days||0);
     }
     if(values.length!==s.duration/15)continue;
-    const support=Math.min(...supports),result=rank(values,s.preference);
-    const row={date:iso,dow,start,end:start+s.duration,average:result.average,days:support,score:result.score+(support<2?5:0),source:'history'};
+    const support=Math.min(...supports),limit=Number(options.threshold),result=Number.isFinite(limit)?{average:Math.round(values.reduce((a,b)=>a+b,0)/values.length),score:Math.max(0,Math.max(...values)-limit)*100+values.reduce((a,b)=>a+b,0)/values.length}:rank(values,s.preference);
+    const row={date:iso,dow,start,end:start+s.duration,average:result.average,peak:Math.max(...values),days:support,score:result.score+(support<2?5:0),source:'history'};
     if(!best||row.score<best.score)best=row;
    }if(best)out.push(best);
   }

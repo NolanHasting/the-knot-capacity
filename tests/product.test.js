@@ -8,4 +8,6 @@ const b=P.aggregate(a,e,{newDay:false,isNew:false,newSession:false});assert.equa
 assert(!('contact' in P.feedbackView({kind:'crowd',contact:'private'})));
 const now=Date.parse('2026-11-18T17:00:00Z'),d={dataState:'live',sourceUpdated:new Date(now).toISOString(),forecast:{points:Array.from({length:25},(_,i)=>({minutes:i*15,count:i===4?80:20}))}};
 const windows=M.thresholdWindows(d,now,{duration:60,period:'afternoon'});assert(windows.length>0);assert.equal(windows[0].peak,80);assert.equal(windows[0].average,28);assert.deepEqual(M.thresholdWindows({...d,dataState:'delayed'},now),[]);assert.deepEqual(M.thresholdWindows(d,now+300000),[]);
+const cells=[];for(let dow=0;dow<7;dow++)for(let hour=7;hour<22;hour++)cells.push({dayIndex:dow,hour,average:hour===9?20:70,samples:60,days:3});
+const weekly=M.historyWindows(cells,now,1,{duration:60,threshold:25});assert.equal(weekly[0].start,540);assert.equal(weekly[0].peak,20);
 console.log('Product launch tests passed');

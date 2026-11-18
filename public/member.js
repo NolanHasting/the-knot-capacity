@@ -19,7 +19,7 @@
    const item=node('div','');item.className='threshold-row '+(w.peak<=settings.threshold?'match':'');
    const desc=node('div','');desc.append(node('strong',title),node('small',range(w)));
    const bar=node('div','');bar.className='threshold-track';const fill=node('i','');fill.style.width=Math.min(100,w.average)+'%';bar.append(fill);
-   const value=node('div','');value.className='window-count';value.append(node('strong',String(w.average)),node('small',Number.isFinite(w.peak)?'peak '+w.peak:'hourly avg.'));
+   const value=node('div','');value.className='window-count';value.append(node('strong',String(w.average)),node('small',w.source==='history'?'hourly avg. max '+w.peak:Number.isFinite(w.peak)?'peak '+w.peak:'hourly avg.'));
    item.append(desc,bar,value);list.append(item);
   };
   if(today.length){for(const w of today)add(w,w.peak<=settings.threshold?'Within preference':'Above preference');
@@ -48,7 +48,7 @@
  form.querySelectorAll('[name="feedbackKind"]').forEach(x=>x.addEventListener('change',fields));fields();
  let clientId;try{clientId=localStorage.getItem('knot-feedback-token');if(!clientId){clientId=crypto.randomUUID();localStorage.setItem('knot-feedback-token',clientId);}}catch{clientId=crypto.randomUUID();}
  form.addEventListener('submit',async e=>{
-  e.preventDefault();const button=el('submitFeedback'),notice=el('feedbackStatus'),kind=selected('feedbackKind');
+  e.preventDefault();if(location.origin!=='https://climbtheknot.live'){el('feedbackStatus').textContent='Feedback is disabled in preview.';return;}const button=el('submitFeedback'),notice=el('feedbackStatus'),kind=selected('feedbackKind');
   if(contact.value.trim()&&!consent.checked){notice.textContent='Please agree to be contacted or remove your contact details.';return;}
   button.disabled=true;notice.textContent='Sending…';
   const body={kind,clientId,message:kind==='suggestion'?msg.value:'',contactConsent:consent.checked,contact:contact.value};
