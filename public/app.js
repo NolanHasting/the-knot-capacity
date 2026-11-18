@@ -200,6 +200,7 @@ function render(d){
  const color=d.color||'#70e6a2';
  const connection=({live:'Live',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
  if($('connection').textContent!==connection)$('connection').textContent=connection;$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
+ $('liveDot').dataset.state=state;
  renderCount(closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count);
  $('status').textContent=live?({GREAT:'Quiet',GOOD:'Moderate',BAD:'Very busy',QUIET:'Quiet',MODERATE:'Moderate',BUSY:'Busy','VERY BUSY':'Very busy','AT CAPACITY':'At capacity'}[d.label]||''):'';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
@@ -228,6 +229,7 @@ function errorState(message){
  lastData=null;window.dispatchEvent(new CustomEvent('knot:status',{detail:null}));
  window.updateMemberExperience?.(null);
  $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
+ $('liveDot').dataset.state='offline';
  $('status').textContent='';$('status').style.color='#ff6767';renderCount('—');
  $('open').textContent='Count unavailable';$('trend').textContent='No live trend';$('fill').style.width='0%';
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';

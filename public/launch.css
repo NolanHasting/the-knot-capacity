@@ -99,20 +99,20 @@
   color: var(--secondary);
 }
 .counter-window {
-  position: relative;
-  display: inline-block;
+  display: inline-grid;
   overflow: hidden;
   flex-shrink: 0;
 }
 .count-reading .big {
-  display: block;
+  grid-area: 1 / 1;
+  padding-inline: .02em .09em;
   color: var(--text);
   font-size: clamp(4.25rem, 10vw, 6.25rem);
   min-height: 0;
   line-height: 1;
   font-weight: 760;
 }
-.count-outgoing { position: absolute; inset: 0 auto auto 0; pointer-events: none; }
+.count-outgoing { pointer-events: none; }
 .crowd-state {
   display: flex;
   align-items: baseline;
@@ -217,7 +217,17 @@
   transform-origin: center;
   animation: live-chart-pulse 1.8s ease-out infinite;
 }
-.motion-reduced .now-pulse { animation: none; }
+#liveDot { position: relative; }
+#liveDot[data-state="live"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--good);
+  animation: live-chart-pulse 1.8s ease-out infinite;
+}
+.motion-reduced .now-pulse,
+.motion-reduced #liveDot::after { animation: none; }
 @keyframes live-chart-pulse {
   from { transform: scale(1); opacity: .55; }
   to { transform: scale(2.45); opacity: 0; }
