@@ -96,7 +96,7 @@ The experimental nowcast uses same-day inferred recounts and learned departure r
 
 ## Launch candidate
 
-The homepage leads with the current crowd and outlook. One date-selectable chart shows today’s live counts and forecast, past reported counts or future forecasts. The planner and weekly heatmap follow. The chart and heatmap each have one Tab stop for their points or cells. Arrow keys move within them. The chart also has Previous and Next buttons for browsing readings, and a Pause pulse button when the live marker is active.
+The homepage leads with the current crowd and outlook. One date-selectable chart shows today’s live counts and forecast, past reported counts or future forecasts. The planner and weekly heatmap follow. Select chart readings with a click or tap. The heatmap has one Tab stop for its cells, and arrow keys move between them. The chart honors the device’s reduced-motion preference. Visitors can also turn off the Now pulse and counter animation with Reduce motion under Privacy & settings.
 
 The launch branch uses the backend's gated experimental estimate. If it is unavailable, the reported count remains visible and the estimate is left blank. The weekly heatmap still shows averages of reported counts. V4, historical Firestore documents and stored forecast scores require no migration.
 

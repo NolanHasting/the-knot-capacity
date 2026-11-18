@@ -97,22 +97,14 @@
   </div>
   <div class="charthead">
    <div id="historySummary" class="history-summary" aria-live="polite">Today</div>
-   <div class="chart-options">
-    <span id="forecastType"></span>
-    <button class="refresh" id="chartMotion" type="button" aria-controls="dayChart" hidden>Pause pulse</button>
-   </div>
+   <span id="forecastType"></span>
   </div>
-  <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="group" tabindex="-1" aria-label="Crowd by time on the selected date" aria-describedby="chart-help"></svg></div>
+  <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="img" aria-label="Crowd by time on the selected date" aria-describedby="dayNote"></svg></div>
   <div class="legend" aria-label="Chart legend">
    <span data-series="reported"><i></i>Reported</span><span data-series="forecast"><i class="forecast"></i>Forecast</span><span data-series="range"><i class="band"></i>Estimated range</span><span data-series="recounts"><i class="recount"></i>Recount</span>
   </div>
-  <div class="chart-readings" role="group" aria-label="Browse chart readings">
-   <button class="refresh" id="chartPrevious" type="button" aria-label="Previous chart reading" aria-disabled="true">←</button>
-   <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
-   <button class="refresh" id="chartNext" type="button" aria-label="Next chart reading" aria-disabled="true">→</button>
-  </div>
+  <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
   <p class="chartnote" id="dayNote"></p>
-  <p class="fine chart-help" id="chart-help">Use the left and right arrow keys to move between chart points.</p>
  </article>
 </section>
 
@@ -164,6 +156,7 @@
   <summary>Privacy &amp; settings</summary>
   <p>Climbing preferences stay on this device. Optional analytics, including Google Analytics, use browser identifiers to count visits and feature use. You can turn analytics off anytime.</p>
   <label><input type="checkbox" id="analyticsConsent"> Allow optional usage analytics</label>
+  <label><input type="checkbox" id="motionPreference"> Reduce motion</label>
   <button type="button" class="refresh" id="resetLocal">Clear local settings</button>
  </details>
 </div>

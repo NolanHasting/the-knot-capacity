@@ -4,7 +4,7 @@ let busy=false,lastData=null;
 function time(s){return s?new Date(s).toLocaleTimeString([],{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}):'—';}
 function hourLabel(h){return (h%12||12)+':00 '+(h<12?'AM':'PM');}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-const setDayChart=bindChartPoints($('dayChart'),$('daySelection'),$('chartPrevious'),$('chartNext'));
+const setDayChart=bindChartPoints($('dayChart'),$('daySelection'));
 const svg=(name,attr)=>`<${name} ${attr}/>`;
 function clearChart(text){setDayChart('<text x="45" y="125" fill="#bfbfbf" font-size="13">'+esc(text)+'</text>',{reset:true});}
 function dayChart(d){
@@ -69,21 +69,21 @@ function dayChart(d){
   const p=history[i],ts=Date.parse(p.timestamp);
   if(showNow&&ts===nowTs)continue;
   const label=time(p.timestamp)+': '+p.count+' reported';
-  markers.push('<circle class="chart-point" cx="'+x(ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" tabindex="-1" data-time="'+ts+'" data-kind="reported" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" data-time="'+ts+'" data-kind="reported" data-info="'+esc(label)+'"/>');
  }
  for(const p of projected){
   if(!Number.isFinite(p.count)||showNow&&p.ts===nowTs)continue;
   const label=time(new Date(p.ts).toISOString())+': '+p.count+' forecast'+(Number.isFinite(p.low)&&Number.isFinite(p.high)?' · range '+p.low+'–'+p.high:'');
-  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" tabindex="-1" data-time="'+p.ts+'" data-kind="forecast" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" data-time="'+p.ts+'" data-kind="forecast" data-info="'+esc(label)+'"/>');
  }
  for(const event of (d.recounts||[])){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
   const label='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
-  markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" tabindex="-1" data-time="'+Date.parse(event.timestamp)+'" data-kind="recount" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+  markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" data-time="'+Date.parse(event.timestamp)+'" data-kind="recount" data-info="'+esc(label)+'"/>');
  }
  if(showNow){
   const label=time(d.sourceUpdated||d.updated)+': '+d.count+' reported now';
-  markers.push(`<circle class="chart-point" cx="${x(nowTs)}" cy="${y(d.count)}" r="12" fill="transparent" tabindex="-1" data-time="${nowTs}" data-kind="now" role="button" aria-label="${esc(label)}" data-info="${esc(label)}"/>`);
+  markers.push(`<circle class="chart-point" cx="${x(nowTs)}" cy="${y(d.count)}" r="12" fill="transparent" data-time="${nowTs}" data-kind="now" data-info="${esc(label)}"/>`);
  }
  setDayChart(marks+shapes+markers.join('')+ticks.join(''));
  $('forecastType').textContent=projected.length?'Reported + forecast':'Reported counts';
@@ -181,7 +181,7 @@ function renderCount(value){
  const box=count.parentElement;
  box.querySelector('.count-outgoing')?.remove();
  count.textContent=next;
- if(reduceMotion.matches||!count.animate||!/^[0-9]+$/.test(old)||!/^[0-9]+$/.test(next))return;
+ if(reduceMotion.matches||document.body.classList.contains('motion-reduced')||!count.animate||!/^[0-9]+$/.test(old)||!/^[0-9]+$/.test(next))return;
  const direction=Number(next)>Number(old)?1:-1;
  const outgoing=document.createElement('span');
  outgoing.className='big count-outgoing';

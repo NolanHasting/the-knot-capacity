@@ -4,17 +4,6 @@
  const input=el('historyDate'),summary=el('historySummary'),legend=el('forecastType'),svg=el('dayChart'),note=el('dayNote');
  let lastGraph=null,request=null,latest=lastData,statusReceived=Boolean(latest);
  const setGraph=setDayChart;
- const motionButton=el('chartMotion');
- function updateMotionButton(){
-  const hidden=reduceMotion.matches||!svg.querySelector('.now-dot');
-  if(hidden&&document.activeElement===motionButton)el('historyToday').focus({preventScroll:true});
-  motionButton.hidden=hidden;
- }
- motionButton.addEventListener('click',()=>{
-  const paused=svg.classList.toggle('pulse-paused');
-  motionButton.textContent=paused?'Resume pulse':'Pause pulse';
- });
- reduceMotion.addEventListener('change',updateMotionButton);
  const series=[...document.querySelectorAll('.legend [data-series]')];
  function showSeries(...visible){
   for(const item of series)item.hidden=!visible.includes(item.dataset.series);
@@ -97,7 +86,7 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    for(let i=0;i<source.length;i+=Math.max(1,Math.ceil(source.length/130))){
     const p=source[i];
     if(!Number.isFinite(p.count)||!Number.isFinite(p.minute))continue;
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" tabindex="-1" data-time="'+p.minute+'" data-kind="reported" role="button" aria-label="'+safe(tick(p.minute)+': '+p.count+' reported')+'" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?10:5)+'" fill="transparent" stroke="none" data-time="'+p.minute+'" data-kind="reported" data-info="'+safe(tick(p.minute)+': '+p.count+' reported')+'"/>';
    }
   }
   if(!isFuture){
@@ -106,13 +95,13 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
     const mx=x(localMinute(event.timestamp)),my=y(event.count);
     const info='Inferred recount · '+tick(localMinute(event.timestamp))+' · '+event.count+' reported · down '+event.drop;
     html+='<path d="M'+mx+' '+(my-6)+' l6 6 -6 6 -6 -6 Z" class="recount-mark" stroke="#111" stroke-width="1.5"><title>'+safe(info)+'</title></path>';
-    html+='<circle class="chart-point" cx="'+mx+'" cy="'+my+'" r="'+(mobile?12:10)+'" fill="transparent" tabindex="-1" data-time="'+localMinute(event.timestamp)+'" data-kind="recount" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"/>';
+    html+='<circle class="chart-point" cx="'+mx+'" cy="'+my+'" r="'+(mobile?12:10)+'" fill="transparent" data-time="'+localMinute(event.timestamp)+'" data-kind="recount" data-info="'+safe(info)+'"/>';
    }
   }
   if(isFuture){
    for(const p of observed){
     const info=tick(p.minute)+': '+p.count+(p.assumedClose?' at closing':' forecast');
-    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" tabindex="-1" data-time="'+p.minute+'" data-kind="forecast" role="button" aria-label="'+safe(info)+'" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
+    html+='<circle class="chart-point" cx="'+x(p.minute)+'" cy="'+y(p.count)+'" r="'+(mobile?5.5:4.2)+'" fill="#f0c468" data-time="'+p.minute+'" data-kind="forecast" data-info="'+safe(info)+'"><title>'+safe(info)+'</title></circle>';
    }
   }
   setGraph(html);
@@ -131,14 +120,12 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    legend.textContent='';note.textContent='';showSeries();
    clearChart(statusReceived?'Unable to load today’s counts.':'Waiting for today’s counts…');
   }
-  updateMotionButton();
  }
  async function load(){
   updateDateBounds();
   const date=input.value;if(!date||!input.validity.valid)return;
   request?.abort();request=null;lastGraph=null;
   setGraph('',{reset:true});
-  updateMotionButton();
   if(date===today){showToday();return;}
   const controller=new AbortController();request=controller;
   summary.textContent='Loading…';note.textContent='';legend.textContent='';showSeries();

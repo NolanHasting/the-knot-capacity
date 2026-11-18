@@ -207,18 +207,6 @@
 
 .tracker .history-toolbar { align-items: end; }
 .tracker .timeline-panel .charthead { margin-top: 12px; min-height: 44px; align-items: center; }
-.chart-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
-.tracker .chart-options button { font-size: .875rem; }
-.chart-readings {
-  display: grid;
-  grid-template-columns: 44px minmax(0,1fr) 44px;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-.tracker .chart-readings button { min-width: 44px; padding-inline: 6px; }
-.tracker .chart-readings button[aria-disabled="true"] { opacity: .55; cursor: default; }
-.tracker .chart-readings .graph-selection { margin: 0; }
 .tracker .timeline-panel .history-summary { margin-top: 0; }
 .tracker .legend [hidden] { display: none; }
 .tracker .legend i.forecast { background: repeating-linear-gradient(90deg,#f0c468 0 4px,transparent 4px 7px); }
@@ -229,7 +217,7 @@
   transform-origin: center;
   animation: live-chart-pulse 1.8s ease-out infinite;
 }
-.pulse-paused .now-pulse { animation: none; }
+.motion-reduced .now-pulse { animation: none; }
 @keyframes live-chart-pulse {
   from { transform: scale(1); opacity: .55; }
   to { transform: scale(2.45); opacity: 0; }
@@ -237,7 +225,6 @@
 .tracker .chart { min-width: 0; }
 .tracker .chartnote { min-height: 0; margin: 5px 0 0; }
 .tracker .graph-selection { margin-bottom: 0; }
-.tracker .chart-help { margin: 5px 0 0; }
 .tracker .heat-detail {
   background: #141414;
   border-color: var(--divider);
