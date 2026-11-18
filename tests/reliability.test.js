@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {health}=require('../functions/health');
+const {health,statusCacheSeconds,occupancyEstimate}=require('../functions/health');
 const A=require('../functions/analytics');
 const S=require('../functions/seasonal');
 // All schedule checks use America/New_York independently of host timezone.
@@ -27,6 +27,18 @@ assert.equal(health({open:true,sourceUpdated:'2026-11-01T12:00:00Z'},
  at('2026-11-01T12:01:00Z')).state,'live');
 assert.equal(health({open:true,sourceUpdated:'2026-11-01T03:00:00Z'},
  at('2026-11-01T06:30:00Z')).state,'closed');
+const source={open:true,sourceUpdated:'2026-11-16T13:59:15.000Z'};
+assert.equal(statusCacheSeconds(source,'live',at('2026-11-16T14:01:04Z')),15);
+assert.equal(statusCacheSeconds(source,'live',at('2026-11-16T14:02:10Z')),5);
+assert.equal(statusCacheSeconds(source,'live',at('2026-11-16T14:02:15Z')),0);
+assert.equal(statusCacheSeconds(source,'closed',at('2026-11-16T11:59:56Z')),4);
+const last={count:30,timestamp:'2026-11-16T13:30:00Z'};
+const status={...source,estimatedNow:35,recountModel:{lastResetAt:last.timestamp,rateSamples:5}};
+assert.deepEqual(occupancyEstimate(status,last,'live',at('2026-11-16T14:00:00Z')),
+ {count:35,ageMinutes:30,experimental:true});
+assert.equal(occupancyEstimate(status,last,'delayed',at('2026-11-16T14:00:00Z')),null);
+assert.equal(occupancyEstimate(status,{...last,timestamp:source.sourceUpdated},'live',at('2026-11-16T14:00:00Z')),null);
+assert.equal(occupancyEstimate(status,last,'live',at('2026-11-16T14:31:00Z')),null);
 // The frozen forecast identifies its implementation, not a hard-coded legacy model.
 const t=at('2026-11-16T14:00:00Z'),day='2026-11-16';
 const observed=[{timestamp:at('2026-11-16T14:15:00Z').toISOString(),count:45}];

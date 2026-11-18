@@ -11,7 +11,7 @@ async function start(){
  el('login').onsubmit=async e=>{e.preventDefault();try{await signInWithEmailAndPassword(auth,el('email').value,el('password').value);}catch{status('Sign-in failed.');}finally{el('password').value='';}};
  el('logout').onclick=()=>signOut(auth);
  onAuthStateChanged(auth,async user=>{el('adminData').hidden=true;el('login').hidden=!!user;el('logout').hidden=!user; if(!user){status('Sign in to continue.');return;}try{
-  const token=await user.getIdToken(),r=await fetch('/api/admin',{headers:{Authorization:'Bearer '+token},cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Access denied');
+  const token=await user.getIdToken(),r=await fetch('/api/admin',{headers:{Authorization:'Bearer '+token},cache:'no-store'}),d=await r.json();if(auth.currentUser!==user)return;if(!r.ok||!d.ok)throw Error(d.error||'Access denied');
   const totals={},events={},channels={};for(const row of d.daily){for(const k of ['visitors','newVisitors','returningVisitors','sessions'])totals[k]=(totals[k]||0)+(row[k]||0);for(const [k,v] of Object.entries(row.events||{}))events[k]=(events[k]||0)+v;for(const [k,v] of Object.entries(row.channels||{}))channels[k]=(channels[k]||0)+v;}
   el('totals').textContent='Visitor-days: '+(totals.visitors||0)+' · New browsers: '+(totals.newVisitors||0)+' · Returning visitor-days: '+(totals.returningVisitors||0)+' · Sessions: '+(totals.sessions||0);
   table(el('daily'),['Date','Visitors','New','Returning','Sessions'],d.daily.map(r=>[r.date,r.visitors||0,r.newVisitors||0,r.returningVisitors||0,r.sessions||0]));
@@ -20,6 +20,6 @@ async function start(){
   el('health').textContent=JSON.stringify(d.health,null,2);
   table(el('scores'),['Date','Model','15m MAE','30m MAE','60m MAE'],d.scores.map(s=>[s.date,s.model,...[15,30,60].map(h=>s.horizons?.[h]?.sourceMAE)]));
   el('adminData').hidden=false;status('Signed in.');
- }catch(e){status(e.message);}});
+ }catch(e){if(auth.currentUser===user)status(e.message);}});
 }
 start().catch(()=>status('Unable to initialize administrator access.'));

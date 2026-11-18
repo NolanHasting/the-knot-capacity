@@ -9,7 +9,7 @@ const H=require('./history');
 const R=require('./recounts');
 const A=require('./analytics');
 const S=require('./seasonal');
-const {health}=require('./health');
+const {health,statusCacheSeconds,occupancyEstimate}=require('./health');
 const F=require('./feedback');
 const P=require('./product');
 const {getAuth}=require('firebase-admin/auth');
@@ -17,6 +17,7 @@ const {createHash}=require('node:crypto');
 initializeApp();
 const db=getFirestore();
 const REGION='us-east1';
+const TRACKER_ORIGIN='https://climbtheknot.live';
 // Explicitly use the runtime identity already authorized for GitHub deployments.
 // Gen 2 otherwise defaults to the Compute Engine account, which caused 403 ActAs errors.
 const RUNTIME_SERVICE_ACCOUNT='theknotcapacity@appspot.gserviceaccount.com';
@@ -95,13 +96,14 @@ exports.collectOccupancy=onSchedule({schedule:'* * * * *',timeZone:L.TZ,region:R
 // Firebase Hosting rewrites /api/status to this function on the same domain.
 exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
  maxInstances:3,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
+ res.set('Cache-Control','no-store').set('X-Content-Type-Options','nosniff');
  if(req.method!=='GET'){res.status(405).json({ok:false,error:'GET only'});return;}
  try{
   const now=new Date(),p=L.parts(now);
   const [s,d,w,a]=await Promise.all([STATUS.get(),db.collection('days').doc(p.day).get(),WEEKLY.get(),db.collection('system').doc('forecastAccuracy').get()]);
   if(!s.exists){res.status(503).set('Cache-Control','no-store').json({ok:false,error:'No reading exists yet. Check that collectOccupancy is deployed, enabled, and running in Firebase Scheduler.'});return;}
   const status=s.data(),weekly=w.exists?w.data():{};
-  let response=L.summarize(status,d.exists?d.data():{},weekly);
+  const response=L.summarize(status,d.exists?d.data():{},weekly,now);
   // Schedule and collection health are independent. A failed opening/closing
   // collector must never make yesterday's CLOSED/OPEN state look current.
   const runtime=health(status,now);
@@ -117,10 +119,7 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
   // Only expose a same-day inferred recount, never treat it as a verified staff count.
   const last=response.recounts.at(-1);
   response.lastInferredRecount=last?{count:last.count,timestamp:last.timestamp,verified:false}:null;
-  const estimateAge=(now.getTime()-Date.parse(last?.timestamp||''))/60000;
-  const estimateReady=runtime.state==='live'&&last&&estimateAge>=0&&estimateAge<=60&&
-   (status.recountModel?.rateSamples||0)>=5&&Number.isFinite(status.estimatedNow);
-  response.occupancyEstimate=estimateReady?{count:status.estimatedNow,ageMinutes:Math.round(estimateAge),experimental:true}:null;
+  response.occupancyEstimate=occupancyEstimate(status,last,runtime.state,now);
   // Preserve legacy fields for existing widgets; new UI uses the explicit estimate.
   if(runtime.state==='live'&&Number.isFinite(response.count))Object.assign(response,L.crowd(response.count,true));
   // Display a warning if source readings are old. Never silently claim LIVE.
@@ -137,14 +136,16 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
    const direction=L.trend(Number.isFinite(status.trendPer30)?status.trendPer30:null,true);
    response.trend=direction.key;response.trendLabel=direction.label;response.trendArrow=direction.arrow;
   }
-  response.bestTimes=L.best(weekly,new Date(),response.dataState==='live'?status.forecast:null,status.sourceUpdated);
+  response.bestTimes=L.best(weekly,now,response.dataState==='live'?status.forecast:null,status.sourceUpdated);
   if(response.dataState!=='live'){response.forecast=null;response.trendPer30=null;response.trendLabel='DATA NOT LIVE';response.trendArrow=null;}
   if(response.dataState==='delayed')response.warning='Source reading delayed; last known count only.';
   if(runtime.scheduledOpen&&!status.open)response.warning='Collector has not reported an open-hours reading. Displaying stale data status.';
   if(response.dataState==='offline')response.warning='Source unavailable; last known count is not reliable.';
   if(status.error&&response.dataState!=='closed')response.warning=(response.warning||'')+' Source fetch failed.';
-  res.set('Cache-Control','public, max-age=0, s-maxage=15');
-  res.set('X-Content-Type-Options','nosniff');
+  const servedAt=new Date();
+  const sameMinute=Math.floor(now.getTime()/60000)===Math.floor(servedAt.getTime()/60000);
+  const cacheSeconds=sameMinute?statusCacheSeconds(status,runtime.state,servedAt):0;
+  if(cacheSeconds>0)res.set('Cache-Control','public, max-age=0, s-maxage='+cacheSeconds);
   res.json(response);
  }catch(e){logger.error('GET status failed',e);res.status(503).set('Cache-Control','no-store').json({ok:false,error:'Backend could not read occupancy from Firestore. Check function logs and Firestore permissions.'});}
 });
@@ -243,7 +244,7 @@ exports.submitFeedback=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:1
  maxInstances:2,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
  res.set('Cache-Control','no-store').set('X-Content-Type-Options','nosniff');
  if(req.method!=='POST')return res.status(405).json({ok:false,error:'POST only'});
- if(req.get('origin')!=='https://climbtheknot.live'&&!/^https:\/\/theknotcapacity(?:--[a-z0-9-]+)?\.web\.app$/.test(req.get('origin')||''))return res.status(403).json({ok:false,error:'Use the tracker website.'});
+ if(req.get('origin')!==TRACKER_ORIGIN)return res.status(403).json({ok:false,error:'Use the tracker website.'});
  if(!req.is('application/json')||(req.rawBody?.length||0)>8192)return res.status(400).json({ok:false,error:'Invalid submission.'});
  let input;try{input=F.validateFeedback(req.body);}catch(e){return res.status(400).json({ok:false,error:e.message});}
  const now=new Date(),day=L.parts(now).day,global=db.collection('feedbackLimits').doc(day);
@@ -271,7 +272,7 @@ exports.submitFeedback=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:1
 exports.recordProductEvent=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:15,maxInstances:2,invoker:'public',serviceAccount:RUNTIME_SERVICE_ACCOUNT},async(req,res)=>{
  res.set('Cache-Control','no-store');
  if(req.method!=='POST')return res.status(405).json({ok:false});
- if(req.get('origin')!=='https://climbtheknot.live'||req.get('host')===undefined)return res.status(403).json({ok:false});
+ if(req.get('origin')!==TRACKER_ORIGIN)return res.status(403).json({ok:false});
  if(!req.is('application/json')||(req.rawBody?.length||0)>1024)return res.status(400).json({ok:false});
  let event;try{event=P.validateEvent(req.body);}catch{return res.status(400).json({ok:false});}
  const now=new Date(),day=L.parts(now).day,visitor=createHash('sha256').update(event.visitor).digest('hex'),session=createHash('sha256').update(event.session).digest('hex');

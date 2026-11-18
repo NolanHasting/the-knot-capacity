@@ -71,7 +71,7 @@ function dayChart(d){
  $('dayChart').innerHTML=marks+shapes+markers.join('')+ticks.join('');
  $('forecastType').textContent=forecast?'Forecast':'Reported only';
  $('dayNote').textContent=forecast?
-  'Shaded area shows the estimated range. Closing occupancy is assumed to be zero.':
+  (forecast.intervalType==='recount-calibrated-80'?'Shaded range based on historical inferred-recount errors. ':'Shaded range is provisional. ')+'Closing occupancy is assumed to be zero.':
   'Forecast unavailable without live readings.';
 }
 const HEAT_COLORS=[
@@ -130,9 +130,9 @@ $('heatmap').addEventListener('pointerover',e=>{
 function renderQuieterLater(d){
  const result=window.KnotExperience?.quieterLater(d);
  const clock=m=>{const h=Math.floor(m/60);return (h%12||12)+(m%60?':'+String(m%60).padStart(2,'0'):'')+' '+(h<12?'AM':'PM');};
- const closed=d?.dataState==='closed',recommended=result?.state==='recommended',now=result?.state==='not_quieter';
+ const closed=result?.state==='closed',recommended=result?.state==='recommended',now=result?.state==='not_quieter';
  $('bestQuick').textContent=recommended?clock(result.start):now?'Now':closed?'Closed':result?.state==='no_window'?'No later slot':'Unavailable';
- $('bestQuickNote').textContent=recommended?'About '+result.average+' people for one hour':now?'No meaningfully quieter hour forecast'+(Number.isFinite(result.average)?' · later low ~'+result.average:''):closed?'Check tomorrow’s forecast':result?.state==='no_window'?'Not enough time before closing':'Waiting for a fresh forecast';
+ $('bestQuickNote').textContent=recommended?'About '+result.average+' people for one hour':now?'No meaningfully quieter hour in the forecast':closed?'Check tomorrow’s forecast':result?.state==='no_window'?'Not enough time before closing':'Waiting for a fresh forecast';
 }
 function render(d){
  lastData=d;window.dispatchEvent(new CustomEvent('knot:status',{detail:d}));
@@ -155,8 +155,11 @@ function render(d){
  $('rateNote').textContent=change?'Reported count change':'Not enough recent data';
  $('usual').textContent=d.typicalNow==null?'—':d.typicalNow;
  $('usualNote').textContent=Number.isFinite(d.typicalNow)?'Historical average':'Unavailable';
- $('next').textContent=live&&d.forecast?d.forecast.projected:'—';
- $('nextNote').textContent=live&&d.forecast?'Estimated in '+Math.min(60,d.forecast.horizonMinutes)+' min':'Not available';
+ const horizon=d.forecast?.horizonMinutes;
+ const hour=live&&horizon>60&&d.forecast.points?.find(p=>p.minutes===60);
+ $('next').textContent=Number.isFinite(hour?.count)?hour.count:'—';
+ $('nextNote').textContent=Number.isFinite(hour?.count)?'Estimate 60 min after last reading':
+  live&&Number.isFinite(horizon)&&horizon<=60?'Closing within an hour':'Forecast unavailable';
  
  renderQuieterLater(d);
  dayChart(d);renderHeat(d.heatmap);window.updateMemberExperience?.(d);
@@ -170,7 +173,6 @@ function errorState(message){
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
  $('updated').textContent='—';$('capacity').textContent='—';
  $('dayNote').textContent='Data unavailable.';clearChart('Unable to load counts.');
- $('besttimes').innerHTML='<div class="fine">No current recommendations.</div>';
  $('heatmap').innerHTML='';
 }
 async function refresh(){

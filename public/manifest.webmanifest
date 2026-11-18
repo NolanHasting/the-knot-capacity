@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Knot Capacity",
   "short_name": "Knot",
-  "start_url": "/?source=installed",
+  "start_url": "/?utm_source=installed",
   "scope": "/",
   "display": "standalone",
   "background_color": "#101410",
