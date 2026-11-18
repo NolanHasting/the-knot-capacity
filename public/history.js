@@ -1,9 +1,13 @@
 'use strict';
 (()=>{
  const el=id=>document.getElementById(id);
- const input=el('historyDate'),summary=el('historySummary'),legend=el('historyLegend'),svg=el('historyChart'),note=el('historyNote');
- let lastGraph=null,request=null;
- const setGraph=bindChartPoints(svg,el('historySelection'));
+ const input=el('historyDate'),summary=el('historySummary'),legend=el('forecastType'),svg=el('dayChart'),note=el('dayNote');
+ let lastGraph=null,request=null,latest=lastData,statusReceived=Boolean(latest);
+ const setGraph=setDayChart;
+ const series=[...document.querySelectorAll('.legend [data-series]')];
+ function showSeries(...visible){
+  for(const item of series)item.hidden=!visible.includes(item.dataset.series);
+ }
  const mobileLayout=window.matchMedia('(max-width: 600px)');
  const zone='America/New_York',parts=new Intl.DateTimeFormat('en-US',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
  const dayFmt=new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'long',month:'long',day:'numeric',year:'numeric'});
@@ -25,6 +29,7 @@
   if(!source.length){setGraph('<text x="40" y="155" fill="#aaa">No data for this date.</text>',{reset:true});return;}
   const minX=7*60,maxX=23*60;
   const observed=source.filter(p=>Number.isFinite(p.count));
+  if(!observed.length){setGraph('<text x="40" y="155" fill="#aaa">No data for this date.</text>',{reset:true});return;}
   const peak=Math.max(100,...observed.map(p=>Math.max(p.count,p.high||0))),ceiling=Math.ceil(peak/25)*25;
   const left=mobile?37:45,right=mobile?350:743,top=20,bottom=mobile?204:246;
   const x=m=>left+(m-minX)/(maxX-minX)*(right-left);
@@ -101,12 +106,30 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
   }
   setGraph(html);
  }
+ function showToday(){
+  if(summary.textContent!=='Today')summary.textContent='Today';
+  if(latest){
+   dayChart(latest);
+   const forecast=latest.dataState==='live'&&Array.isArray(latest.forecast?.points)?latest.forecast.points:[];
+   const series=['reported'];
+   if(forecast.length>1)series.push('forecast');
+   if(forecast.length>1&&forecast.every(p=>Number.isFinite(p.low)&&Number.isFinite(p.high)))series.push('range');
+   if(latest.recounts?.length)series.push('recounts');
+   showSeries(...(latest.todayHistory?.length?series:[]));
+  }else{
+   legend.textContent='';note.textContent='';showSeries();
+   clearChart(statusReceived?'Unable to load today’s counts.':'Waiting for today’s counts…');
+  }
+ }
  async function load(){
-  const date=input.value;if(!date)return;
-  request?.abort();
-  const controller=new AbortController();request=controller;lastGraph=null;
-  summary.textContent='Loading…';note.textContent='';legend.textContent='';
-  setGraph('<text x="40" y="155" fill="#aaa">Loading…</text>',{reset:true});
+  updateDateBounds();
+  const date=input.value;if(!date||!input.validity.valid)return;
+  request?.abort();request=null;lastGraph=null;
+  setGraph('',{reset:true});
+  if(date===today){showToday();return;}
+  const controller=new AbortController();request=controller;
+  summary.textContent='Loading…';note.textContent='';legend.textContent='';showSeries();
+  setGraph('<text x="40" y="155" fill="#aaa">Loading…</text>');
   try{
    const res=await fetch('/api/history?date='+encodeURIComponent(date),{cache:'no-store',signal:controller.signal});
    const d=await res.json();
@@ -116,9 +139,11 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    if(d.mode==='historical'){
     summary.textContent=label+(d.summary.readings?' · avg. '+d.summary.average+' · peak '+d.summary.max:' · No counts recorded');
     legend.textContent='Reported';
+    showSeries(...(d.points.length?['reported',...(d.recounts?.length?['recounts']:[])]:[]));
    }else{
     summary.textContent=label;
     legend.textContent='Forecast';
+    if(d.points.some(p=>Number.isFinite(p.count)))showSeries('forecast',...(d.points.some(p=>Number.isFinite(p.low)&&Number.isFinite(p.high))?['range']:[]));
    }
    note.textContent=d.mode==='future'?(d.points.length?'The shaded area shows the forecast range.':'Forecast unavailable for this date.'):'Reported counts and inferred recounts.';
    graph(d);
@@ -127,12 +152,23 @@ for (let h = 7; h <= 23; h += mobile ? 4 : 2) {
    summary.textContent='Could not load this date';note.textContent='Please try again.';setGraph('',{reset:true});
   }
  }
- const today=new Date(),iso=localDay(today),addDays=n=>{
-  const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);
- };
- input.min=addDays(-120);input.max=addDays(30);input.value=iso;
+ let today;
+ function updateDateBounds(){
+  const day=localDay(new Date());
+  if(day===today)return;
+  if(!today||input.value===today)input.value=day;
+  today=day;input.min=addFrom(day,-120);input.max=addFrom(day,30);
+ }
  input.addEventListener('change',load);
- mobileLayout.addEventListener('change',()=>{if(lastGraph)graph(lastGraph);});
+ window.addEventListener('knot:status',event=>{
+  latest=event.detail;statusReceived=true;
+  updateDateBounds();
+  if(input.value===today)showToday();
+ });
+ mobileLayout.addEventListener('change',()=>{
+  if(input.value===today)showToday();
+  else if(lastGraph)graph(lastGraph);
+ });
  el('historyToday').onclick=()=>{input.value=localDay(new Date());load();};
  el('historyTomorrow').onclick=()=>{input.value=addFrom(localDay(new Date()),1);load();};
  el('historyPrevious').onclick=()=>{if(input.value>input.min){input.value=addFrom(input.value,-1);load();}};

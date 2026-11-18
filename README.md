@@ -96,7 +96,7 @@ The experimental nowcast uses same-day inferred recounts and learned departure r
 
 ## Launch candidate
 
-The homepage leads with the current crowd, the next-hour outlook and the planner. The current reading and recent-crowd details expand on demand. Now, Plan and Trends link to dedicated sections. Each chart and the weekly heatmap have one Tab stop. Arrow keys move within the chart or heatmap.
+The homepage leads with the current crowd and outlook. One date-selectable chart shows today’s live counts and forecast, past reported counts or future forecasts. The planner and weekly heatmap follow. The chart and heatmap each have one Tab stop, and arrow keys move between readings or cells.
 
 The launch branch uses the backend's gated experimental estimate. If it is unavailable, the reported count remains visible and the estimate is left blank. The weekly heatmap still shows averages of reported counts. V4, historical Firestore documents and stored forecast scores require no migration.
 

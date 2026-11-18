@@ -16,9 +16,10 @@ function dayChart(d){
  const start=Date.parse(history[0].timestamp),nowTs=Date.parse(d.sourceUpdated||d.updated);
  const lastTs=Date.parse(history[history.length-1].timestamp);
  const projected=Number.isFinite(nowTs)?points.map(p=>({...p,ts:nowTs+p.minutes*60000})):[];
- const maxTs=projected.length?Math.max(lastTs,projected[projected.length-1].ts):lastTs;
+ const showNow=d.dataState==='live'&&Number.isFinite(nowTs)&&nowTs>=start&&Number.isFinite(d.count);
+ const maxTs=Math.max(lastTs,projected.at(-1)?.ts??lastTs,showNow?nowTs:lastTs);
  const span=Math.max(60000,maxTs-start);
- const all=[...history.map(p=>p.count),...projected.map(p=>Number.isFinite(p.high)?p.high:p.count)];
+ const all=[...history.map(p=>p.count),...(showNow?[d.count]:[]),...projected.map(p=>Number.isFinite(p.high)?p.high:p.count)];
  const mobile=window.matchMedia('(max-width: 600px)').matches;
  const width=mobile?360:600,height=mobile?234:250;
  $('dayChart').setAttribute('viewBox','0 0 '+width+' '+height);
@@ -49,8 +50,14 @@ function dayChart(d){
   shapes+=`<path d="${upper}" fill="none" stroke="#f0c468" stroke-opacity=".36" stroke-width="1" stroke-dasharray="3 5"/>`;
   }
   shapes+=`<path d="${line}" fill="none" stroke="#f0c468" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="7 5"/>`;
+ }
+ if(showNow){
   const divider=x(nowTs);shapes+=svg('line',`x1="${divider.toFixed(2)}" y1="${top}" x2="${divider.toFixed(2)}" y2="${bottom}" stroke="#999" stroke-dasharray="3 6"`);
   shapes+=`<text x="${Math.min(right-7,divider+6).toFixed(2)}" y="13" fill="#fff" font-size="10" text-anchor="${divider>right-65?'end':'start'}">NOW</text>`;
+  shapes+=`<g aria-hidden="true" pointer-events="none" fill="#70e6a2">
+   <circle class="now-pulse" cx="${divider}" cy="${y(d.count)}" r="5"/>
+   <circle class="now-dot" cx="${divider}" cy="${y(d.count)}" r="4" stroke="#000" stroke-width="1.25"/>
+  </g>`;
  }
  const ticks=[],tickCount=mobile?3:5;for(let i=0;i<tickCount;i++){
   const ts=start+span*i/(tickCount-1);
@@ -59,11 +66,13 @@ function dayChart(d){
  // Invisible touch targets keep the chart visually clean, but accessible.
  const markers=[];
  for(let i=0;i<history.length;i+=Math.max(1,Math.ceil(history.length/110))){
-  const p=history[i],ts=Date.parse(p.timestamp),label=time(p.timestamp)+': '+p.count+' reported';
+  const p=history[i],ts=Date.parse(p.timestamp);
+  if(showNow&&ts===nowTs)continue;
+  const label=time(p.timestamp)+': '+p.count+' reported';
   markers.push('<circle class="chart-point" cx="'+x(ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5)+'" fill="transparent" tabindex="-1" data-time="'+ts+'" data-kind="reported" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
  for(const p of projected){
-  if(!Number.isFinite(p.count))continue;
+  if(!Number.isFinite(p.count)||showNow&&p.ts===nowTs)continue;
   const label=time(new Date(p.ts).toISOString())+': '+p.count+' forecast'+(Number.isFinite(p.low)&&Number.isFinite(p.high)?' · range '+p.low+'–'+p.high:'');
   markers.push('<circle class="chart-point" cx="'+x(p.ts).toFixed(2)+'" cy="'+y(p.count).toFixed(2)+'" r="'+(mobile?11:5.5)+'" fill="transparent" tabindex="-1" data-time="'+p.ts+'" data-kind="forecast" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
  }
@@ -71,6 +80,10 @@ function dayChart(d){
   if(!Number.isFinite(Date.parse(event.timestamp))||!Number.isFinite(event.count))continue;
   const label='Inferred recount · '+time(event.timestamp)+' · '+event.count+' reported · down '+event.drop;
   markers.push('<circle class="chart-point" cx="'+x(Date.parse(event.timestamp)).toFixed(2)+'" cy="'+y(event.count).toFixed(2)+'" r="'+(mobile?12:9)+'" fill="transparent" tabindex="-1" data-time="'+Date.parse(event.timestamp)+'" data-kind="recount" role="button" aria-label="'+esc(label)+'" data-info="'+esc(label)+'"/>');
+ }
+ if(showNow){
+  const label=time(d.sourceUpdated||d.updated)+': '+d.count+' reported now';
+  markers.push(`<circle class="chart-point" cx="${x(nowTs)}" cy="${y(d.count)}" r="12" fill="transparent" tabindex="-1" data-time="${nowTs}" data-kind="now" role="button" aria-label="${esc(label)}" data-info="${esc(label)}"/>`);
  }
  setDayChart(marks+shapes+markers.join('')+ticks.join(''));
  $('forecastType').textContent=projected.length?'Reported + forecast':'Reported counts';
@@ -159,6 +172,27 @@ function renderQuieterLater(d){
  $('bestQuick').textContent=recommended?clock(result.start):now?'Now':closed?'Closed':result?.state==='no_window'?'No later slot':'Unavailable';
  $('bestQuickNote').textContent=recommended?result.average+' people on average':now?'No quieter hour forecast':closed?'Check tomorrow’s forecast':result?.state==='no_window'?'Not enough time before closing':'Waiting for a fresh forecast';
 }
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+function renderCount(value){
+ const count=$('count');
+ const old=count.textContent,next=String(value);
+ if(old===next)return;
+ count.getAnimations?.().forEach(animation=>animation.cancel());
+ const box=count.parentElement;
+ box.querySelector('.count-outgoing')?.remove();
+ count.textContent=next;
+ if(reduceMotion.matches||!count.animate||!/^[0-9]+$/.test(old)||!/^[0-9]+$/.test(next))return;
+ const direction=Number(next)>Number(old)?1:-1;
+ const outgoing=document.createElement('span');
+ outgoing.className='big count-outgoing';
+ outgoing.setAttribute('aria-hidden','true');
+ outgoing.textContent=old;
+ box.append(outgoing);
+ const options={duration:240,easing:'ease-out'};
+ count.animate([{transform:`translateY(${direction*36}%)`,opacity:0},{transform:'translateY(0)',opacity:1}],options);
+ const animation=outgoing.animate([{transform:'translateY(0)',opacity:1},{transform:`translateY(${direction*-36}%)`,opacity:0}],options);
+ animation.finished.then(()=>outgoing.remove(),()=>outgoing.remove());
+}
 function render(d){
  lastData=d;window.dispatchEvent(new CustomEvent('knot:status',{detail:d}));
 
@@ -166,7 +200,7 @@ function render(d){
  const color=d.color||'#70e6a2';
  const connection=({live:'Live',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
  if($('connection').textContent!==connection)$('connection').textContent=connection;$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
- $('count').textContent=closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count;
+ renderCount(closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count);
  $('status').textContent=live?({GREAT:'Quiet',GOOD:'Moderate',BAD:'Very busy',QUIET:'Quiet',MODERATE:'Moderate',BUSY:'Busy','VERY BUSY':'Very busy','AT CAPACITY':'At capacity'}[d.label]||''):'';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
  $('open').textContent=closed?'Outside regular hours':live?'People reported':delayed?'Last reported count':'Count unavailable';
@@ -188,17 +222,16 @@ function render(d){
   live&&Number.isFinite(horizon)&&horizon<=60?'Closing within an hour':'Forecast unavailable';
  
  renderQuieterLater(d);
- dayChart(d);renderHeat(d.heatmap);window.updateMemberExperience?.(d);
+ renderHeat(d.heatmap);window.updateMemberExperience?.(d);
 }
 function errorState(message){
  lastData=null;window.dispatchEvent(new CustomEvent('knot:status',{detail:null}));
  window.updateMemberExperience?.(null);
  $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
- $('status').textContent='';$('status').style.color='#ff6767';$('count').textContent='—';
+ $('status').textContent='';$('status').style.color='#ff6767';renderCount('—');
  $('open').textContent='Count unavailable';$('trend').textContent='No live trend';$('fill').style.width='0%';
  $('rate').textContent='—';$('rateNote').textContent='Unavailable';$('next').textContent='—';$('usual').textContent='—';$('bestQuick').textContent='Unavailable';$('bestQuickNote').textContent='Unavailable';$('usualNote').textContent='—';$('nextNote').textContent='Unavailable';
  $('updated').textContent='—';$('capacity').textContent='—';
- $('dayNote').textContent='';$('forecastType').textContent='';clearChart('Unable to load counts.');
  if(!$('heatmap').children.length)renderHeat([]);
 }
 async function refresh(){
@@ -215,5 +248,3 @@ async function refresh(){
 $('refresh').onclick=refresh;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 refresh();setInterval(()=>{if(!document.hidden)refresh();},30000);
-const dayLayout=window.matchMedia('(max-width: 600px)');
-dayLayout.addEventListener('change',()=>{if(lastData)dayChart(lastData);});
