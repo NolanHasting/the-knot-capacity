@@ -9,7 +9,7 @@
  let latest=null,lastResults=null,lastEstimate=null;
  const estimateNotes={
   reported:'Using the gym’s count',
-  recount_adjusted:'Allows for people who may have left',
+  recount_adjusted:'Accounts for departures',
   historical:'Based on past counts for this hour',
   last_reported:'Using the gym’s last available count',
   closed:'Outside scheduled hours'
@@ -53,7 +53,7 @@
   el('recountNow').textContent=r?r.count:'—';
   el('recountNote').textContent=r?time.format(new Date(r.timestamp))+' ET':'';
   if(e)lastEstimate=e;
-  el('estimateNow').textContent=lastEstimate?.count??'—';
+  el('estimateNow').textContent=lastEstimate?(lastEstimate.basis==='closed'?'0':'~'+lastEstimate.count):'—';
   el('estimateNote').textContent=e?(estimateNotes[e.basis]||'Estimated occupancy'):
    (lastEstimate?'Showing the previous estimate':'Waiting for a count');
   el('comparison').textContent=ctx.live&&Number.isFinite(d.typicalNow)?(d.count===d.typicalNow?'Typical for this hour':Math.abs(d.count-d.typicalNow)+' '+(d.count>d.typicalNow?'above':'below')+' average'):'';
