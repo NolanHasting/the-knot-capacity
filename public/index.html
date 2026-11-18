@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#101412">
 <meta name="description" content="Check the reported live capacity at The Knot Climbing Gym in Gainesville, FL. See current crowds, staff recounts, quieter hours and occupancy forecasts. Independent tracker.">
 <link rel="canonical" href="https://climbtheknot.live/">
 <meta name="robots" content="index,follow,max-image-preview:large">
@@ -26,35 +26,115 @@
 <title>The Knot Climbing Gym Live Capacity & Crowd Forecast | Gainesville, FL</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
 <link rel="apple-touch-icon" href="/logo.png">
-<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/launch.css"></head><body><main>
-<header><div class="brand"><img src="/logo.png" alt="The Knot climbing gym logo">
-<div><div class="brand-name">THE KNOT</div><div class="brand-sub">Capacity · Independent Tracker</div></div></div>
-<div class="headright"><div class="connection" role="status" aria-live="polite"><i id="liveDot" class="dot"></i><span id="connection">Connecting</span></div><button class="refresh share-icon" id="shareConditions" type="button" aria-label="Share current conditions" title="Share current conditions"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M7 10H5v11h14V10h-2"/></svg></button><button class="refresh" id="refresh">Refresh</button></div></header>
-<section class="seo-heading">
-<h1>Live capacity at The Knot Climbing Gym</h1>
-<p>Gainesville, Florida · Live counts, forecasts and historical data.</p>
-<nav class="member-nav launch-nav" aria-label="Main navigation"><a href="#now">Now</a><a href="#best" data-plan>Plan</a><a href="#weekly" data-trends>Trends</a><a href="/widgets.html" id="widgetGuide">Widget</a></nav></section>
-<section class="hero" id="now"><article class="panel">
-<div class="count-top"><div class="eyebrow">Reported now</div><div class="eyebrow" id="open">—</div></div>
-<div class="big" id="count">—</div><div class="summary"><div class="status" id="status">Loading…</div><div class="trend" id="trend">—</div></div>
-<div class="track"><i id="fill" class="fill"></i></div><div class="capacityfoot"><span id="capacity">—</span><span id="updated">—</span></div><div class="count-context"><div><span class="eyebrow">Last recount</span><strong id="recountNow">—</strong><small id="recountNote">Inferred from the reported count</small></div><div><span class="eyebrow">Estimated now</span><strong id="estimateNow">—</strong><small id="estimateNote">Loading</small></div></div><p class="fine" id="hoursNow">Regular hours</p></article>
-<article class="panel"><div class="eyebrow" style="margin-bottom:14px">Crowd Outlook</div><div class="tiles">
-<div class="tile"><div class="eyebrow">Last 30 min</div><strong id="rate">—</strong><small id="rateNote">Reported count change</small></div>
-<div class="tile"><div class="eyebrow">Typical count</div><strong id="usual">—</strong><small id="usualNote">Past days at this hour</small><small id="comparison"></small></div>
-<div class="tile"><div class="eyebrow">Next hour</div><strong id="next">—</strong><small id="nextNote">Estimated crowd</small></div>
-<div class="tile"><div class="eyebrow">Quieter later</div><strong id="bestQuick">—</strong><small id="bestQuickNote">Loading</small></div>
-</div></article></section>
-<div class="section-title"><h2>Today</h2></div>
-<section class="charts combined">
-<article class="panel"><div class="charthead"><h3>Crowd level through closing</h3><span id="forecastType">Reported and forecast</span></div>
-<div class="chart-scroll" role="region" aria-label="Occupancy timeline"><svg class="chart" id="dayChart" viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Today's source readings and expected occupancy through closing"></svg></div>
-<div class="chartnote" id="dayNote">Waiting for readings.</div><div class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</div>
-<div class="legend"><span><i></i>Reported</span><span><i class="forecast"></i>Forecast</span><span><i class="band"></i>Estimated range</span><span><i class="recount"></i>Inferred recount</span></div></article>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/launch.css"></head>
+<body class="tracker">
+<a class="skip-link" href="#now">Skip to current crowd</a>
+<header class="masthead">
+ <div class="brand"><img src="/logo.png" alt="" width="29" height="42">
+  <div><div class="brand-name">Climb the Knot</div><div class="brand-sub">Independent crowd tracker</div></div>
+ </div>
+ <nav class="launch-nav" aria-label="Main navigation">
+  <a href="#now">Now</a><a href="#best" data-plan>Plan</a><a href="#weekly" data-trends>Trends</a><a href="/widgets.html" id="widgetGuide">Install</a>
+ </nav>
+ <button class="refresh share-icon" id="shareConditions" type="button" aria-label="Share current conditions" title="Share current conditions">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M7 10H5v11h14V10h-2"/></svg>
+ </button>
+</header>
+<main>
+<section id="now" tabindex="-1" aria-labelledby="page-heading">
+ <div class="tracker-intro">
+  <h1 id="page-heading">How busy is The Knot?</h1>
+  <p>Climbing gym in Gainesville, Florida</p>
+ </div>
+ <div class="hero">
+  <article class="panel current-panel" aria-labelledby="count-heading">
+   <div class="count-top">
+    <h2 id="count-heading">Crowd now</h2>
+    <div class="connection" role="status"><i id="liveDot" class="dot" aria-hidden="true"></i><span id="connection">Connecting</span></div>
+   </div>
+   <div class="count-reading">
+    <span class="big" id="count">—</span>
+    <div class="reading-text"><span id="open">Waiting for a reading</span><strong id="status"></strong></div>
+   </div>
+   <div class="reading-meta">
+    <span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button>
+   </div>
+   <details class="reading-details">
+    <summary>About this reading</summary>
+    <p class="fine">Source: the gym’s public counter.</p>
+    <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
+    <p class="fine" id="capacity">—</p>
+    <dl class="count-context">
+     <div><dt>Last inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>
+     <div><dt>Adjusted estimate</dt><dd><strong id="estimateNow">—</strong><small id="estimateNote"></small></dd></div>
+    </dl>
+   </details>
+  </article>
+  <article class="panel outlook-panel" aria-labelledby="outlook-heading">
+   <div class="count-top"><h2 id="outlook-heading">Crowd outlook</h2><span id="hoursNow" class="fine">Regular hours</span></div>
+   <div class="tiles">
+    <div class="tile quieter-tile"><h3>Quieter later</h3><strong id="bestQuick">—</strong><small id="bestQuickNote">Waiting for a forecast</small></div>
+    <div class="tile"><h3>In one hour</h3><strong id="next">—</strong><small id="nextNote">Waiting for a forecast</small></div>
+   </div>
+   <details class="reading-details">
+    <summary>Recent and typical crowds</summary>
+    <dl class="count-context">
+     <div><dt>Last 30 minutes</dt><dd><strong id="rate">—</strong><small id="rateNote">Reported count change</small><small id="trend">—</small></dd></div>
+     <div><dt>Typical for this hour</dt><dd><strong id="usual">—</strong><small id="usualNote">Average of past reports</small><small id="comparison"></small></dd></div>
+    </dl>
+   </details>
+  </article>
+ </div>
 </section>
-<div class="section-title"><h2>By date</h2><p>Historical counts and future capacity estimates.</p></div>
-<section class="panel history-panel">
+
+<section class="tracker-section" id="best" tabindex="-1" aria-labelledby="plan-heading">
+ <h2 id="plan-heading">Find your time to climb</h2>
+ <div class="panel plan-panel">
+  <div class="climb-preferences">
+   <div class="threshold">
+    <label for="climbLimit">How many people are you comfortable climbing with?</label>
+    <output id="climbLimitValue" for="climbLimit">40 people or fewer</output>
+    <input type="range" id="climbLimit" min="10" max="100" step="5" value="40">
+    <div class="threshold-labels" aria-hidden="true"><span>10</span><span>100</span></div>
+   </div>
+   <details class="planner-options">
+    <summary>Session length and time of day</summary>
+    <div class="climb-filters">
+     <label for="climbDuration">Session length<select id="climbDuration"><option value="60">1 hour</option><option value="90" selected>90 minutes</option><option value="120">2 hours</option></select></label>
+     <label for="climbPeriod">Time of day<select id="climbPeriod"><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option></select></label>
+    </div>
+   </details>
+  </div>
+  <div class="plan-results">
+   <h3 id="weeklyPreference">Suggested sessions</h3>
+   <div id="besttimes" aria-live="polite"></div>
+   <p class="fine plan-note">Preferences stay on this device.</p>
+  </div>
+ </div>
+</section>
+
+<section class="tracker-section" id="weekly" tabindex="-1" aria-labelledby="trends-heading">
+ <h2 id="trends-heading">Crowd trends</h2>
+ <article class="panel timeline-panel" aria-labelledby="today-heading">
+  <div class="charthead"><h3 id="today-heading">Today through closing</h3><span id="forecastType"></span></div>
+  <div class="chart-scroll"><svg class="chart" id="dayChart" viewBox="0 0 600 250" role="group" tabindex="-1" aria-label="Today's reported and forecast crowds by time" aria-describedby="chart-help"></svg></div>
+  <div class="legend"><span><i></i>Reported</span><span><i class="forecast"></i>Forecast</span><span><i class="band"></i>Estimated range</span><span><i class="recount"></i>Inferred recount</span></div>
+  <p class="graph-selection" id="daySelection" aria-live="polite">Select a point to see the count.</p>
+  <p class="chartnote" id="dayNote">Waiting for readings.</p>
+  <p class="fine chart-help" id="chart-help">Use the left and right arrow keys to move between chart points.</p>
+ </article>
+ <article class="panel patterns-panel" id="patterns" aria-labelledby="patterns-heading">
+  <h3 id="patterns-heading">Typical week</h3>
+  <p class="fine" id="heatHelp">Average reported crowd by day and hour. Select a square for its count, or use the arrow keys to explore.</p>
+  <div id="heatDetail" class="heat-detail" role="status">Select a day and hour.</div>
+  <div class="heat" id="heatmap" role="group" aria-label="Typical week heatmap" aria-describedby="heatHelp" tabindex="-1"></div>
+  <div class="heat-scale"><span>0 · Quieter</span><div class="heat-gradient" aria-hidden="true"></div><span>100+ · Busier</span></div>
+  <div class="heat-key"><span><i class="heat-key-closed"></i> Closed</span><span><i class="heat-key-missing"></i> No data</span></div>
+ </article>
+ <section class="panel history-panel" aria-labelledby="history-heading">
+ <h3 id="history-heading">Explore by date</h3>
  <div class="history-toolbar">
-  <div><div class="eyebrow">Select a day</div><div class="date-shortcuts"><button class="refresh" id="historyToday" type="button">Today</button><button class="refresh" id="historyTomorrow" type="button">Tomorrow</button></div><div class="history-control">
+  <div><div class="date-shortcuts"><button class="refresh" id="historyToday" type="button">Today</button><button class="refresh" id="historyTomorrow" type="button">Tomorrow</button></div><div class="history-control">
    <button class="refresh" id="historyPrevious" aria-label="Previous day">←</button>
    <input id="historyDate" type="date" aria-label="Choose occupancy date">
    <button class="refresh" id="historyNext" aria-label="Next day">→</button>
@@ -62,20 +142,36 @@
   <div class="eyebrow" id="historyLegend">Reported data</div>
  </div>
  <div id="historySummary" class="history-summary" aria-live="polite">Loading history…</div>
- <div class="chart-scroll" role="region" aria-label="Selected occupancy history">
-  <svg id="historyChart" class="chart history-chart" viewBox="0 0 760 285" role="img" aria-label="Selected day's observed or projected occupancy by time of day"></svg>
+ <div class="chart-scroll">
+  <svg id="historyChart" class="chart history-chart" viewBox="0 0 760 285" role="group" tabindex="-1" aria-label="Crowd by time on selected date" aria-describedby="chart-help"></svg>
  </div>
- <div class="graph-selection" id="historySelection" aria-live="polite">Select a point to see the count.</div>
+ <p class="graph-selection" id="historySelection" aria-live="polite">Select a point to see the count.</p>
  <p id="historyNote" class="fine">Past dates show reported counts. Future dates show estimates.</p>
 </section>
-<div class="tabs" id="weekly"><button class="tab active" data-tab="patterns" type="button" aria-controls="patterns" aria-pressed="true">Weekly trends</button><button class="tab" data-tab="best" type="button" aria-controls="best" aria-pressed="false">Your time to climb</button></div>
-<section class="view active" id="patterns"><article class="panel"><div class="charthead"><h3>Average crowd by day and hour</h3><span>Historical</span></div><p class="fine">Select a day and hour to see its average crowd.</p><div id="heatDetail" class="heat-detail" role="status" aria-live="polite">Select a cell to see the average count or whether the gym is closed.</div><div class="heat" id="heatmap" role="group" aria-label="Average occupancy by day of week and hour"></div><div class="heat-scale" aria-label="Occupancy color scale from zero to 100 plus people"><span>0 · Quieter</span><div class="heat-gradient"></div><span>100+ · Busier</span></div><div class="heat-key"><span><i class="heat-key-closed"></i> Closed</span><span><i class="heat-key-missing"></i> No data</span></div></article></section>
-<section class="view" id="best"><article class="panel"><div class="charthead"><h3>Your time to climb</h3></div><p class="fine">Set your crowd limit. We’ll suggest the best times.</p><div class="climb-preferences"><div class="threshold"><label for="climbLimit">How many people are you comfortable climbing with?</label><p><output id="climbLimitValue" for="climbLimit">40</output> people or fewer</p><input type="range" id="climbLimit" min="10" max="100" step="5" value="40"><div class="threshold-labels"><span>Quiet</span><span>Moderate</span><span>Social</span></div></div><details class="planner-options"><summary>Session preferences</summary><div class="climb-filters"><label for="climbDuration">Session length<select id="climbDuration"><option value="60">1 hour</option><option value="90" selected>90 minutes</option><option value="120">2 hours</option></select></label><label for="climbPeriod">Time of day<select id="climbPeriod"><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option></select></label></div></details></div><p class="fine" id="weeklyPreference">Suggested sessions</p><div class="best weekly-windows" id="besttimes" aria-live="polite"></div><p class="fine">Estimates, not guarantees. Preferences saved on this device.</p></article></section>
-<section class="panel member-panel" id="feedback"><h2>Feedback</h2><p class="fine">Report crowds while at the gym, or send a suggestion. No account needed.</p><form id="feedbackForm"><fieldset class="feedback-switch choice-group"><legend class="sr-only">Feedback type</legend><label><input type="radio" name="feedbackKind" value="crowd" checked> Report crowds</label><label><input type="radio" name="feedbackKind" value="suggestion"> Suggestion</label></fieldset><div id="crowdFields"><fieldset class="crowd-options choice-group"><legend>How busy is it right now?</legend><label><input type="radio" name="crowdRating" value="quiet" required> Quiet</label><label><input type="radio" name="crowdRating" value="moderate"> Moderate</label><label><input type="radio" name="crowdRating" value="busy"> Busy</label><label><input type="radio" name="crowdRating" value="very_busy"> Very busy</label></fieldset><fieldset class="crowd-options choice-group"><legend>Does the reported count look right? <span class="fine">(optional)</span></legend><label><input type="radio" name="accuracyRating" value="accurate"> Yes</label><label><input type="radio" name="accuracyRating" value="lower"> Too high</label><label><input type="radio" name="accuracyRating" value="higher"> Too low</label></fieldset><label class="check-label"><input id="onSite" type="checkbox" required> I'm at the gym now.</label><details><summary> Add an approximate headcount</summary><label>People you can see<input id="observedCount" type="number" min="0" max="300" step="1" inputmode="numeric"></label></details></div><div id="messageWrap" hidden><label>Your suggestion<textarea id="message" maxlength="1500" rows="3" placeholder="What could we improve?"></textarea></label></div><details id="contactDetails"><summary>Request a reply (optional)</summary><label>Email or phone<input id="contact" maxlength="150" autocomplete="off"></label><label class="check-label"><input id="contactConsent" type="checkbox"> You may contact me about this feedback.</label></details><p class="fine">Feedback is private. Contact details are optional and used only to reply. Please do not identify other climbers.</p><button class="refresh" id="submitFeedback" type="submit">Send feedback</button><p id="feedbackStatus" role="status"></p></form></section>
-<section class="tracker-about" aria-label="About this tracker">
-<h2>About The Knot crowd tracker</h2><h3>When is The Knot open?</h3><p>Regular hours in Gainesville: Monday–Friday 7 AM–11 PM; Saturday–Sunday 7 AM–10 PM Eastern. Check <a href="https://climbtheknot.com/closures/">official closures and changes</a> before visiting.</p><h3>Why can the live count be higher than the actual crowd?</h3><p>The reported count rises with check-ins and is periodically corrected by staff. Downward changes are inferred recounts, not independently confirmed headcounts. When available, the experimental estimate accounts for possible departures.</p><h3>What is the best time to climb?</h3><p>Find times that suit your preferred crowd level and schedule, or check the weekly heatmap for typical crowds. Forecasts are not guarantees.</p><p><a href="/widgets.html">Install the tracker on your phone or Mac</a>.</p>
-<p>Check how busy The Knot Climbing Gym in Gainesville is before heading over. The live count comes from the gym's public occupancy reading. Downward corrections may indicate staff recounts. Forecasts use previous observations. Predictions can change as new data arrives.</p>
-<p>This is an independent project, not the gym's official website. For hours, rates, events, and gym announcements, visit <a href="https://climbtheknot.com/" rel="noopener noreferrer">The Knot's official website</a>.</p>
 </section>
-<p id="toolStatus" class="share-status" role="status" aria-live="polite" hidden></p><details class="footer-privacy"><summary>Privacy &amp; settings</summary><p class="fine">Optional analytics measure visits and feature use with a random browser identifier. Climbing preferences are saved on this device.</p><label><input type="checkbox" id="analyticsConsent"> Allow optional pseudonymous usage analytics</label><button type="button" class="refresh" id="resetLocal">Clear local settings</button></details><footer><span>Knot Capacity</span><span>Independent project · Not affiliated with The Knot</span></footer>
-</main><script defer src="/experience-model.js"></script><script defer src="/member.js"></script><script defer src="/app.js"></script><script defer src="/history.js"></script><script defer src="/launch-config.js"></script><script defer src="/launch.js"></script></body></html>
+
+<div class="tracker-section tracker-information">
+ <details class="panel member-panel lower-detail" id="feedback"><summary>Send feedback</summary><p class="fine">Report crowds while at the gym, or send a suggestion. No account needed.</p><form id="feedbackForm"><fieldset class="feedback-switch choice-group"><legend class="sr-only">Feedback type</legend><label><input type="radio" name="feedbackKind" value="crowd" checked> Report crowds</label><label><input type="radio" name="feedbackKind" value="suggestion"> Suggestion</label></fieldset><div id="crowdFields"><fieldset class="crowd-options choice-group"><legend>How busy is it right now?</legend><label><input type="radio" name="crowdRating" value="quiet" required> Quiet</label><label><input type="radio" name="crowdRating" value="moderate"> Moderate</label><label><input type="radio" name="crowdRating" value="busy"> Busy</label><label><input type="radio" name="crowdRating" value="very_busy"> Very busy</label></fieldset><fieldset class="crowd-options choice-group"><legend>Does the gym’s count look right? <span class="fine">(optional)</span></legend><label><input type="radio" name="accuracyRating" value="accurate"> Yes</label><label><input type="radio" name="accuracyRating" value="lower"> Too high</label><label><input type="radio" name="accuracyRating" value="higher"> Too low</label></fieldset><label class="check-label"><input id="onSite" type="checkbox" required> I'm at the gym now.</label><details><summary> Add an approximate headcount</summary><label>People you can see<input id="observedCount" type="number" min="0" max="300" step="1" inputmode="numeric"></label></details></div><div id="messageWrap" hidden><label>Your suggestion<textarea id="message" maxlength="1500" rows="3" placeholder="What could we improve?"></textarea></label></div><details id="contactDetails"><summary>Request a reply (optional)</summary><label>Email or phone<input id="contact" maxlength="150" autocomplete="off"></label><label class="check-label"><input id="contactConsent" type="checkbox"> You may contact me about this feedback.</label></details><p class="fine">Feedback is private. Contact details are optional and used only to reply. Please do not identify other climbers.</p><button class="refresh" id="submitFeedback" type="submit">Send feedback</button><p id="feedbackStatus" role="status"></p></form></details>
+<details class="panel lower-detail" id="about">
+  <summary>About the tracker and gym hours</summary>
+  <p>Knot Capacity is an independent project for The Knot Climbing Gym in Gainesville. The gym’s public counter rises with check-ins, and staff periodically correct it. A drop can suggest a recount. Forecasts use past readings and can change throughout the day.</p>
+  <p>Regular hours are 7 AM–11 PM on weekdays and 7 AM–10 PM on weekends, Eastern time. Check the <a href="https://climbtheknot.com/closures/">gym’s closure notices</a> before visiting.</p>
+ </details>
+ <details class="panel lower-detail footer-privacy">
+  <summary>Privacy &amp; settings</summary>
+  <p>Climbing preferences stay on this device. Optional analytics use a random browser code to count visits and feature use. You can turn analytics off here at any time.</p>
+  <label><input type="checkbox" id="analyticsConsent"> Allow optional usage analytics</label>
+  <button type="button" class="refresh" id="resetLocal">Clear local settings</button>
+ </details>
+</div>
+<footer><span>Climb the Knot · Independent project</span><a href="https://climbtheknot.com/">Official gym website</a></footer>
+<p id="toolStatus" class="share-status" role="status" hidden></p>
+</main>
+<script defer src="/experience-model.js"></script>
+<script defer src="/chart-controls.js"></script>
+<script defer src="/member.js"></script>
+<script defer src="/app.js"></script>
+<script defer src="/history.js"></script>
+<script defer src="/launch-config.js"></script>
+<script defer src="/launch.js"></script>
+</body></html>

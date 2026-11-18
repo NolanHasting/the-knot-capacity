@@ -155,12 +155,11 @@
  el('widgetGuide').addEventListener('click',()=>window.knotEvent('widget_guide_opened'));
  const navigation=[...document.querySelectorAll('.launch-nav a[href^="#"]')];
  function selectSection(hash){
+  if(hash==='#patterns')hash='#weekly';
   for(const anchor of navigation){
    if(anchor.hash===hash)anchor.setAttribute('aria-current','location');
    else anchor.removeAttribute('aria-current');
   }
-  if(hash==='#weekly')document.querySelector('[data-tab="patterns"]').click();
-  if(hash==='#best')document.querySelector('[data-tab="best"]').click();
  }
  for(const anchor of navigation)anchor.addEventListener('click',()=>{
   selectSection(anchor.hash);
