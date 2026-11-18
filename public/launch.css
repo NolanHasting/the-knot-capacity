@@ -95,7 +95,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin: 12px 0 0;
+  margin: 14px 0 10px;
   color: var(--secondary);
 }
 .counter-window {
@@ -120,11 +120,14 @@
   gap: 4px 14px;
   min-height: 1.5rem;
 }
-.crowd-direction { font-size: .9375rem; }
-.capacity-meter { margin: 14px 0 2px; }
-.capacity-meter p { margin: 0 0 6px; }
+.current-panel .count-top h2 { color: var(--secondary); }
+.reading-caption { margin: 0 0 6px; }
+.reading-caption:empty { display: none; }
+.crowd-direction { font-size: .9375rem; font-weight: 650; }
+.status:not(:empty) + .crowd-direction { border-inline-start: 1px solid var(--divider); padding-inline-start: 14px; }
+.capacity-meter { margin: 22px 0 4px; }
 .tracker .capacity-meter .track {
-  height: 10px;
+  height: 8px;
   margin: 0;
   background: #343434;
   border: 0;
@@ -136,10 +139,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 0 8px;
   color: var(--secondary);
   font-size: .875rem;
 }
+.reading-update { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-inline-start: auto; }
 .reading-meta .refresh { background: transparent; border-color: transparent; color: var(--text); padding-inline: 9px; }
 .reading-meta .refresh:hover { border-color: #777; }
 .tracker summary { color: var(--text); cursor: pointer; }

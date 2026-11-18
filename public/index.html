@@ -49,20 +49,20 @@
  <div class="hero">
   <article class="panel current-panel" aria-labelledby="count-heading">
    <div class="count-top">
-    <h2 id="count-heading">Crowd now</h2>
+    <h2 id="count-heading">Reported now</h2>
     <div class="connection" role="status"><i id="liveDot" class="dot" aria-hidden="true"></i><span id="connection">Connecting</span></div>
    </div>
    <div class="count-reading">
     <span class="counter-window"><span class="big" id="count">—</span></span>
-    <span id="open">Waiting for a reading</span>
    </div>
+   <p class="fine reading-caption" id="open"></p>
    <div class="crowd-state"><strong id="status"></strong><span class="crowd-direction" id="trend"></span></div>
    <div class="capacity-meter">
-    <p class="fine" id="capacity">—</p>
     <div class="track" aria-hidden="true"><i id="fill" class="fill"></i></div>
    </div>
    <div class="reading-meta">
-    <span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button>
+    <span id="capacity">—</span>
+    <div class="reading-update"><span id="updated">Waiting for a reading</span><button class="refresh" id="refresh" type="button">Refresh</button></div>
    </div>
     <dl class="count-context">
      <div><dt>Inferred recount</dt><dd><strong id="recountNow">—</strong><small id="recountNote"></small></dd></div>

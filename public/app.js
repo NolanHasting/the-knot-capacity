@@ -198,13 +198,13 @@ function render(d){
 
  const state=d.dataState||'offline',live=state==='live',delayed=state==='delayed',closed=state==='closed';
  const color=d.color||'#70e6a2';
- const connection=({live:'Live',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
+ const connection=({live:'Open now',delayed:'Delayed',closed:'Closed',offline:'Offline'}[state]||'Offline');
  if($('connection').textContent!==connection)$('connection').textContent=connection;$('liveDot').style.background=live?'#70e6a2':delayed?'#ffc65c':closed?'#a0a0a0':'#ff6767';
  $('liveDot').dataset.state=state;
  renderCount(closed||state==='offline'||!Number.isFinite(d.count)?'—':d.count);
  $('status').textContent=live?({GREAT:'Quiet',GOOD:'Moderate',BAD:'Very busy',QUIET:'Quiet',MODERATE:'Moderate',BUSY:'Busy','VERY BUSY':'Very busy','AT CAPACITY':'At capacity'}[d.label]||''):'';
  $('status').style.color=live?color:delayed?'#ffc65c':'#ff6767';
- $('open').textContent=closed?'Outside regular hours':live?'People reported':delayed?'Last reported count':'Count unavailable';
+ $('open').textContent=closed?'Outside regular hours':live?'':delayed?'Last reported count':'Count unavailable';
  const movement=live?(d.trend==='rising'?['↑','Getting busier']:d.trend==='falling'?['↓','Getting quieter']:['→','Steady']):null;
  $('trend').textContent=movement?movement[0]+' '+movement[1]:'No live trend';
  $('trend').style.color=live?'#fff':'#aaa';
