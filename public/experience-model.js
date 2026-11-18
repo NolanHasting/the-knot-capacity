@@ -4,40 +4,14 @@
  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
  const parts=ms=>{const o=Object.fromEntries(fmt.formatToParts(new Date(ms)).map(x=>[x.type,x.value]));return {date:o.year+'-'+o.month+'-'+o.day,dow:DAYS.indexOf(o.weekday),minute:Number(o.hour)*60+Number(o.minute)};};
  const close=d=>d===0||d===6?1320:1380,finite=Number.isFinite;
- const valid=e=>e&&finite(e.count)&&finite(Date.parse(e.timestamp));
- function recounts(history){
-  const rows=(history||[]).filter(valid).slice().sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp));
-  const events=[];let prev=null,active=null;
-  for(const row of rows){
-   const t=Date.parse(row.timestamp),gap=prev?(t-Date.parse(prev.timestamp))/MIN:Infinity;
-   if(prev&&gap>0&&gap<=10&&parts(t).date===parts(Date.parse(prev.timestamp)).date&&row.count<prev.count){
-    if(active&&t-Date.parse(active.timestamp)<=6*MIN&&prev.count<=active.count){active.timestamp=row.timestamp;active.count=row.count;active.drop=active.previousCount-row.count;}
-    else{active={timestamp:row.timestamp,count:row.count,previousCount:prev.count,drop:prev.count-row.count};events.push(active);}
-   }else if(!prev||gap>10||row.count>prev.count||active&&t-Date.parse(active.timestamp)>6*MIN)active=null;
-   prev=row;
-  }return events;
- }
  function liveContext(d,now=Date.now()){
-  const source=Date.parse(d?.sourceUpdated||''),age=(now-source)/MIN;
-  if(d?.dataState!=='live'||!finite(source)||age< -1||age>4||!finite(d.count))return {live:false,recount:null,estimate:null};
-  const date=parts(source).date,events=recounts(d.todayHistory||[]);
-  const supplied=[...(d.recounts||[]),d.lastInferredRecount,d.recountModel?.lastResetAt?{timestamp:d.recountModel.lastResetAt,count:d.recountModel.lastResetCount}:null];
-  const candidates=[...events,...supplied].filter(valid).filter(e=>Date.parse(e.timestamp)<=source&&parts(Date.parse(e.timestamp)).date===date).sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp));
-  const last=candidates.at(-1)||null;
-  if(!last)return {live:true,recount:null,estimate:{count:d.count,basis:'reported',ageMinutes:null}};
-  const elapsed=Math.max(0,(source-Date.parse(last.timestamp))/MIN);
-  if(elapsed<1)return {live:true,recount:last,estimate:{count:last.count,basis:'recount',ageMinutes:Math.floor(elapsed)}};
-  const rates=[];
-  for(let i=1;i<events.length;i++){
-   const interval=(Date.parse(events[i].timestamp)-Date.parse(events[i-1].timestamp))/MIN;
-   if(interval>=15&&interval<=180&&events[i].drop>=1)rates.push(events[i].drop/interval);
-  }
-  rates.sort((a,b)=>a-b);
-  const local=rates.length>=2?(rates[Math.floor((rates.length-1)/2)]+rates[Math.ceil((rates.length-1)/2)])/2:null;
-  const state=d.recountModel||{},learned=finite(state.departuresPerMinute)&&(state.rateSamples||0)>=2?state.departuresPerMinute:null;
-  const rate=local!==null&&learned!==null?.6*local+.4*learned:local??learned;
-  if(rate===null||elapsed>120)return {live:true,recount:last,estimate:{count:d.count,basis:'reported',ageMinutes:Math.floor(elapsed)}};
-  return {live:true,recount:last,estimate:{count:Math.max(0,Math.round(d.count-Math.max(0,Math.min(2,rate))*elapsed)),basis:elapsed>90?'limited':'adjusted',ageMinutes:Math.floor(elapsed)}};
+  const stamp=Date.parse(d?.sourceUpdated||''),age=now-stamp;
+  const live=d?.dataState==='live'&&finite(d.count)&&finite(stamp)&&age>=-MIN&&age<=4*MIN;
+  if(!live)return {live:false,recount:null,estimate:null};
+  const last=d.lastInferredRecount,t=Date.parse(last?.timestamp||'');
+  const recount=finite(last?.count)&&finite(t)&&t<=stamp&&parts(t).date===parts(stamp).date?last:null;
+  const estimate=d.occupancyEstimate;
+  return {live,recount,estimate:finite(estimate?.count)&&estimate.experimental===true?estimate:null};
  }
  const preferences={quiet:[0,25],balanced:[26,50],social:[51,75]};
  function settings(options={}){
@@ -69,54 +43,92 @@
      values.push(cell.average);supports.push(cell.days||0);
     }
     if(values.length!==s.duration/15)continue;
-    const support=Math.min(...supports),result=rank(values,s.preference);
-    const row={date:iso,dow,start,end:start+s.duration,average:result.average,days:support,score:result.score+(support<2?5:0),source:'history'};
+    const support=Math.min(...supports),limit=Number(options.threshold),result=Number.isFinite(limit)?{average:Math.round(values.reduce((a,b)=>a+b,0)/values.length),score:Math.max(0,Math.max(...values)-limit)*100+values.reduce((a,b)=>a+b,0)/values.length}:rank(values,s.preference);
+    const row={date:iso,dow,start,end:start+s.duration,average:result.average,peak:Math.max(...values),days:support,score:result.score+(support<2?5:0),source:'history'};
     if(!best||row.score<best.score)best=row;
    }if(best)out.push(best);
   }
   return out.sort((a,b)=>a.score-b.score||a.date.localeCompare(b.date));
  }
- function todayWindow(d,now=Date.now(),options={}){
-  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),points=d?.forecast?.points,s=settings(options);
-  if(d?.dataState!=='live'||!finite(origin)||now-origin>4*MIN||origin-now>MIN||!Array.isArray(points))return null;
-  const rows=points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({...x,t:origin+x.minutes*MIN})).sort((a,b)=>a.t-b.t);
-  const candidates=[];
-  for(let start=Math.max(420,s.period[0],Math.ceil(p.minute/30)*30);start+s.duration<=Math.min(close(p.dow)-30,s.period[1]);start+=30){
-   const t=now+(start-p.minute)*MIN-(now%MIN),end=t+s.duration*MIN;
-   if(t<now-MIN||rows[0]?.t>t||rows.at(-1)?.t<end)continue;
-   const values=[];for(let k=0;k<s.duration;k+=15){const at=t+k*MIN;const a=rows.findLast(x=>x.t<=at),b=rows.find(x=>x.t>=at);if(!a||!b)break;const f=b.t===a.t?0:(at-a.t)/(b.t-a.t);values.push(a.count+(b.count-a.count)*f);}
-   if(values.length!==s.duration/15)continue;
-   candidates.push({date:p.date,dow:p.dow,start,end:start+s.duration,...rank(values,s.preference),source:'forecast'});
-  }
-  return candidates.sort((a,b)=>a.score-b.score||a.start-b.start)[0]||null;
+ function forecastRows(d,now){
+  if(!liveContext(d,now).live||!Array.isArray(d.forecast?.points))return [];
+  const origin=Date.parse(d.sourceUpdated);
+  return d.forecast.points.filter(p=>finite(p?.count)&&p.count>=0&&finite(p.minutes)&&p.minutes>=0)
+   .map(p=>({time:origin+p.minutes*MIN,count:p.count})).sort((a,b)=>a.time-b.time);
  }
- // Independent dashboard recommendation: find a quieter hour later today,
- // without applying a user's preferred atmosphere, duration or availability.
+ function windowStats(rows,start,end){
+  function countAt(time){
+   const right=rows.findIndex(p=>p.time>=time);
+   if(right<0)return null;
+   const b=rows[right];
+   if(b.time===time)return b.count;
+   const a=rows[right-1];
+   if(!a||b.time-a.time>30*MIN)return null;
+   return a.count+(b.count-a.count)*(time-a.time)/(b.time-a.time);
+  }
+  const first=countAt(start),last=countAt(end);
+  if(first===null||last===null)return null;
+  const points=[{time:start,count:first},...rows.filter(p=>p.time>start&&p.time<end),{time:end,count:last}];
+  let area=0,peak=first;
+  for(let i=1;i<points.length;i++){
+   const a=points[i-1],b=points[i],gap=b.time-a.time;
+   if(gap>30*MIN)return null;
+   area+=(a.count+b.count)/2*gap;
+   peak=Math.max(peak,b.count);
+  }
+  return {average:area/(end-start),peak};
+ }
+ function untaperedEnd(d,dow){
+  // The provisional forecast tapers over 75 minutes. V4 tapers over 45.
+  // Keep a full hour away from close even when V4 is active.
+  return close(dow)-(d.forecast?.modelVersion==='recount-seasonal-v4'?60:75);
+ }
  function quieterLater(d,now=Date.now()){
-  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),points=d?.forecast?.points;
-  if(d?.dataState!=='live'||!finite(d.count)||!finite(origin)||now-origin>4*MIN||origin-now>MIN||!Array.isArray(points))return {state:'unavailable'};
-  const rows=points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({t:origin+x.minutes*MIN,count:x.count})).sort((a,b)=>a.t-b.t);
-  const sample=t=>{
-   let a=null,b=null;
-   for(const r of rows){if(r.t<=t)a=r;if(r.t>=t){b=r;break;}}
-   if(!a||!b||b.t-a.t>30*MIN)return null;
-   return a.t===b.t?a.count:a.count+(b.count-a.count)*(t-a.t)/(b.t-a.t);
-  };
+  if(d?.dataState==='closed')return {state:'closed'};
+  const rows=forecastRows(d,now);
+  if(rows.length<2)return {state:'unavailable'};
+  const p=parts(now),minuteStart=now-now%MIN;
+  const first=Math.max(420,Math.ceil((p.minute+15+(now%MIN?1:0))/30)*30);
+  const end=untaperedEnd(d,p.dow);
+  if(first+60>end)return {state:'no_window'};
   const candidates=[];
-  // Avoid the closing taper, which can otherwise make closing look attractive.
-  for(let start=Math.max(420,Math.ceil((p.minute+15)/30)*30);start+60<=close(p.dow)-60;start+=30){
-   const t=now+(start-p.minute)*MIN-now%MIN;
-   const values=[0,15,30,45,60].map(m=>sample(t+m*MIN));
-   if(values.some(v=>v===null))continue;
-   const avg=(values[0]/2+values[1]+values[2]+values[3]+values[4]/2)/4;
-   candidates.push({start,end:start+60,average:Math.round(avg),score:avg+.12*Math.max(...values)});
+  for(let start=first;start+60<=end;start+=30){
+   const time=minuteStart+(start-p.minute)*MIN;
+   const stats=windowStats(rows,time,time+60*MIN);
+   if(!stats)continue;
+   candidates.push({start,end:start+60,average:Math.round(stats.average),rawAverage:stats.average,score:stats.average+.12*stats.peak});
   }
-  if(!candidates.length)return {state:'no_window'};
+  if(!candidates.length)return {state:'unavailable'};
   const sorted=candidates.sort((a,b)=>a.score-b.score||a.start-b.start);
-  const lower=sorted.filter(w=>w.average<=d.count-3);
-  if(!lower.length)return {state:'not_quieter'};
-  const best=lower[0],selected=lower.filter(x=>x.score<=best.score+2).sort((a,b)=>a.start-b.start)[0];
-  return {state:'recommended',...selected};
+  const quieter=sorted.filter(w=>w.rawAverage<=d.count-3);
+  if(!quieter.length)return {state:'not_quieter'};
+  const best=quieter[0],selected=quieter.filter(w=>w.score<=best.score+2).sort((a,b)=>a.start-b.start)[0];
+  return {state:'recommended',start:selected.start,end:selected.end,average:selected.average};
  }
- return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater};
+ function thresholdWindows(d,now=Date.now(),options={}){
+  const rows=forecastRows(d,now);
+  if(rows.length<2)return [];
+  const p=parts(now),s=settings(options),minuteStart=now-now%MIN;
+  const first=Math.max(420,s.period[0],Math.ceil((p.minute+(now%MIN?1:0))/30)*30);
+  const end=Math.min(untaperedEnd(d,p.dow),s.period[1]);
+  const windows=[];
+  for(let start=first;start+s.duration<=end;start+=30){
+   const time=minuteStart+(start-p.minute)*MIN;
+   const stats=windowStats(rows,time,time+s.duration*MIN);
+   if(stats)windows.push({start,end:start+s.duration,average:Math.round(stats.average),peak:Math.ceil(stats.peak),source:'forecast'});
+  }
+  return windows;
+ }
+ // Limit the planner to distinct, non-overlapping sessions. If none meet
+ // the peak threshold, show one closest alternative rather than a long list.
+ function pickWindows(windows,limit,max=3){
+  const rows=(windows||[]).filter(w=>finite(w.average)&&finite(w.peak)&&finite(w.start)&&finite(w.end));
+  const ranked=rows.slice().sort((a,b)=>a.average-b.average||a.peak-b.peak||a.start-b.start);
+  const matches=ranked.filter(w=>w.peak<=limit);
+  if(!matches.length)return rows.sort((a,b)=>a.peak-b.peak||a.average-b.average||a.start-b.start).slice(0,1);
+  const selected=[];
+  for(const w of matches){if(selected.every(p=>w.end<=p.start||w.start>=p.end))selected.push(w);if(selected.length>=max)break;}
+  return selected.sort((a,b)=>a.start-b.start);
+ }
+ return {parts,close,liveContext,historyWindows,quieterLater,thresholdWindows,pickWindows};
 });

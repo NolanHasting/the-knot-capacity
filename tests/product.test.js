@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),P=require('../functions/product'),M=require('../public/experience-model');
+const id='12345678-1234-1234-1234-123456789abc';
+const e=P.validateEvent({event:'page_view',channel:'direct',visitor:id,session:id,email:'ignored'});
+assert(!('email' in e));assert.throws(()=>P.validateEvent({...e,event:'anything'}));assert.throws(()=>P.validateEvent({...e,visitor:'bad'}));
+const a=P.aggregate({},e,{newDay:true,isNew:true,newSession:true});assert.equal(a.visitors,1);assert.equal(a.newVisitors,1);assert.equal(a.sessions,1);
+const b=P.aggregate(a,e,{newDay:false,isNew:false,newSession:false});assert.equal(b.visitors,1);assert.equal(b.sessions,1);
+assert(!('contact' in P.feedbackView({kind:'crowd',contact:'private'})));
+const now=Date.parse('2026-11-18T17:00:00Z'),d={dataState:'live',count:20,sourceUpdated:new Date(now).toISOString(),forecast:{points:Array.from({length:25},(_,i)=>({minutes:i*15,count:i===4?80:20}))}};
+const windows=M.thresholdWindows(d,now,{duration:60,period:'afternoon'});assert(windows.length>0);assert.equal(windows[0].peak,80);assert.equal(windows[0].average,28);assert.deepEqual(M.thresholdWindows({...d,dataState:'delayed'},now),[]);assert.deepEqual(M.thresholdWindows(d,now+300000),[]);
+const cells=[];for(let dow=0;dow<7;dow++)for(let hour=7;hour<22;hour++)cells.push({dayIndex:dow,hour,average:hour===9?20:70,samples:60,days:3});
+const weekly=M.historyWindows(cells,now,1,{duration:60,threshold:25});assert.equal(weekly[0].start,540);assert.equal(weekly[0].peak,20);
+const options=[{start:600,end:660,average:20,peak:25},{start:630,end:690,average:21,peak:26},{start:720,end:780,average:24,peak:30},{start:840,end:900,average:27,peak:35},{start:960,end:1020,average:28,peak:36}];
+assert.equal(M.pickWindows(options,40).length,3);assert.equal(M.pickWindows(options,10).length,1);assert.equal(M.pickWindows(options,10)[0].peak,25);assert.deepEqual(M.pickWindows([],40),[]);
+const picked=M.pickWindows(options,40);assert.ok(picked.every((row,i)=>i===0||row.start>=picked[i-1].end));
+console.log('Product launch tests passed');
