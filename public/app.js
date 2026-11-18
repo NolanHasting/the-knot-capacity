@@ -209,7 +209,7 @@ function render(d){
  $('trend').textContent=movement?movement[0]+' '+movement[1]:'No live trend';
  $('trend').style.color=live?'#fff':'#aaa';
  $('fill').style.width=closed||state==='offline'||!Number.isFinite(d.percent)?'0%':Math.min(100,d.percent)+'%';$('fill').style.background=color;
- $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of reference capacity':'Capacity unavailable';
+ $('capacity').textContent=closed?'Outside gym hours':state!=='offline'&&Number.isFinite(d.percent)?d.percent+'% of capacity':'Capacity unavailable';
  $('updated').textContent=d.sourceUpdated?'Updated '+time(d.sourceUpdated)+' ET':'No reading received';
  const change=live?d.reportedChange30:null;
  $('rate').textContent=change&&Number.isFinite(change.change)?(change.change>0?'+':'')+change.change:'—';
