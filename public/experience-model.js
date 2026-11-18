@@ -7,11 +7,18 @@
  function liveContext(d,now=Date.now()){
   const stamp=Date.parse(d?.sourceUpdated||''),age=now-stamp;
   const live=d?.dataState==='live'&&finite(d.count)&&finite(stamp)&&age>=-MIN&&age<=4*MIN;
-  if(!live)return {live:false,recount:null,estimate:null};
-  const last=d.lastInferredRecount,t=Date.parse(last?.timestamp||'');
-  const recount=finite(last?.count)&&finite(t)&&t<=stamp&&parts(t).date===parts(stamp).date?last:null;
-  const estimate=d.occupancyEstimate;
-  return {live,recount,estimate:finite(estimate?.count)&&estimate.experimental===true?estimate:null};
+
+  const last=d?.lastInferredRecount,t=Date.parse(last?.timestamp||'');
+  const recount=live&&finite(last?.count)&&finite(t)&&t<=stamp&&parts(t).date===parts(stamp).date?last:null;
+  const supplied=d?.occupancyEstimate;
+  let estimate=null;
+  if(d?.dataState==='closed')estimate={count:0,basis:'closed'};
+  else if(finite(supplied?.count)&&supplied.experimental===true&&
+   (live||['historical','last_reported'].includes(supplied.basis)))estimate=supplied;
+  else if(live)estimate={count:d.count,basis:'reported'};
+  else if(finite(d?.typicalNow))estimate={count:d.typicalNow,basis:'historical'};
+  else if(finite(d?.count))estimate={count:d.count,basis:'last_reported'};
+  return {live,recount,estimate};
  }
  const preferences={quiet:[0,25],balanced:[26,50],social:[51,75]};
  function settings(options={}){

@@ -119,7 +119,7 @@ exports.getOccupancy=onRequest({region:REGION,memory:'256MiB',timeoutSeconds:20,
   // Only expose a same-day inferred recount, never treat it as a verified staff count.
   const last=response.recounts.at(-1);
   response.lastInferredRecount=last?{count:last.count,timestamp:last.timestamp,verified:false}:null;
-  response.occupancyEstimate=occupancyEstimate(status,last,runtime.state,now);
+  response.occupancyEstimate=occupancyEstimate(status,last,runtime.state,now,response.typicalNow);
   // Preserve legacy fields for existing widgets; new UI uses the explicit estimate.
   if(runtime.state==='live'&&Number.isFinite(response.count))Object.assign(response,L.crowd(response.count,true));
   // Display a warning if source readings are old. Never silently claim LIVE.

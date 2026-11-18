@@ -19,11 +19,22 @@ function statusCacheSeconds(status,state,now){
  const untilStale=state==='live'?Date.parse(status.sourceUpdated)+3*60000-time:Infinity;
  return Math.max(0,Math.floor(Math.min(15000,untilMinute,untilStale)/1000));
 }
-function occupancyEstimate(status,last,state,now){
- if(state!=='live'||!last||status.recountModel?.lastResetAt!==last.timestamp||
-  (status.recountModel.rateSamples||0)<5||!Number.isFinite(status.estimatedNow)||status.estimatedNow<0)return null;
- const age=(now.getTime()-Date.parse(last.timestamp))/60000;
- if(!Number.isFinite(age)||age<0||age>60)return null;
- return {count:status.estimatedNow,ageMinutes:Math.round(age),experimental:true};
+function occupancyEstimate(status,last,state,now,typicalNow){
+ const estimate=(count,basis)=>({count:Math.max(0,Math.round(count)),basis,experimental:true});
+ if(state==='closed')return estimate(0,'closed');
+ const count=status.count;
+ if(state==='live'&&Number.isFinite(count)){
+  const model=status.recountModel||{};
+  const minutes=(Date.parse(status.sourceUpdated)-Date.parse(last?.timestamp))/60000;
+  if(last&&model.lastResetAt===last.timestamp&&minutes>=0&&model.rateSamples>=2&&
+   Number.isFinite(model.departuresPerMinute)&&model.departuresPerMinute>=0){
+   // Limit extrapolation across long gaps. Each new source reading still updates the base.
+   const correction=model.departuresPerMinute*Math.min(minutes,60);
+   return estimate(count-correction,'recount_adjusted');
+  }
+  return estimate(count,'reported');
+ }
+ if(Number.isFinite(typicalNow))return estimate(typicalNow,'historical');
+ return Number.isFinite(count)?estimate(count,'last_reported'):null;
 }
 module.exports={health,statusCacheSeconds,occupancyEstimate};

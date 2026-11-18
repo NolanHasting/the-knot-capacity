@@ -41,3 +41,25 @@ jobs:
             fi
           done
 
+
+  prune-backups:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prune backups covered by two newer production snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          backups=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/backup/)
+          cutoff=$(sed -nE 's|^backup/production-([0-9]{4}-[0-9]{2}-[0-9]{2})(-.*)?$|\1|p' <<< "$backups" | sort -ru | sed -n '2p')
+          [[ -n "$cutoff" ]] || exit 0
+          while IFS= read -r branch; do
+            [[ "$branch" =~ -([0-9]{4}-[0-9]{2}-[0-9]{2})(-.*)?$ ]] || continue
+            [[ "${BASH_REMATCH[1]}" < "$cutoff" ]] || continue
+            tip=$(git rev-parse "origin/$branch")
+            git merge-base --is-ancestor "$tip" origin/main || continue
+            git push --force-with-lease="refs/heads/$branch:$tip" origin ":refs/heads/$branch"
+          done <<< "$backups"
