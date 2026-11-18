@@ -134,7 +134,7 @@ function renderQuieterLater(d){
  $('bestQuickNote').textContent=result?.state==='recommended'?'About '+result.average+' people for the next hour':d?.dataState==='closed'?'Closed today':result?.state==='not_quieter'?'No quieter hour expected':result?.state==='no_window'?'No later hour available':'Forecast unavailable';
 }
 function render(d){
- lastData=d;
+ lastData=d;window.dispatchEvent(new CustomEvent('knot:status',{detail:d}));
 
  const state=d.dataState||'offline',live=state==='live',delayed=state==='delayed',closed=state==='closed';
  const color=d.color||'#70e6a2';
@@ -161,7 +161,7 @@ function render(d){
  dayChart(d);renderHeat(d.heatmap);window.updateMemberExperience?.(d);
 }
 function errorState(message){
- lastData=null;
+ lastData=null;window.dispatchEvent(new CustomEvent('knot:status',{detail:null}));
  window.updateMemberExperience?.(null);
  $('connection').textContent='Offline';$('liveDot').style.background='#ff6767';
  $('status').textContent='Offline';$('status').style.color='#ff6767';$('count').textContent='—';
@@ -176,7 +176,7 @@ async function refresh(){
  if(busy)return;
  busy=true;$('refresh').disabled=true;
  try{
-  const res=await fetch('/api/status?t='+Date.now(),{cache:'no-store',headers:{Accept:'application/json'}});
+  const res=await fetch('/api/status',{cache:'default',headers:{Accept:'application/json'}});
   let data;try{data=await res.json();}catch{throw Error('Firebase /api/status did not return JSON (HTTP '+res.status+'). Confirm the getOccupancy function was deployed.');}
   if(!res.ok||!data||data.ok!==true)throw Error((data&&data.error)||('API HTTP '+res.status));
   render(data);

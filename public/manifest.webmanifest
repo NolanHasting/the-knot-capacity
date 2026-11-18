@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Knot Capacity",
+  "short_name": "Knot",
+  "start_url": "/?source=installed",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101410",
+  "theme_color": "#101410",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

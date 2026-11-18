@@ -118,5 +118,20 @@
   const best=lower[0],selected=lower.filter(x=>x.score<=best.score+2).sort((a,b)=>a.start-b.start)[0];
   return {state:'recommended',...selected};
  }
- return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater};
+ function thresholdWindows(d,now=Date.now(),options={}){
+  const origin=Date.parse(d?.sourceUpdated||''),p=parts(now),s=settings(options);
+  if(d?.dataState!=='live'||!finite(origin)||now-origin>4*MIN||origin-now>MIN||!Array.isArray(d?.forecast?.points))return [];
+  const rows=d.forecast.points.filter(x=>finite(x.count)&&finite(x.minutes)).map(x=>({t:origin+x.minutes*MIN,count:x.count})).sort((a,b)=>a.t-b.t);
+  const sample=t=>{let a=null,b=null;for(const r of rows){if(r.t<=t)a=r;if(r.t>=t){b=r;break;}}if(!a||!b||b.t-a.t>30*MIN)return null;return a.t===b.t?a.count:a.count+(b.count-a.count)*(t-a.t)/(b.t-a.t);};
+  const windows=[];
+  for(let start=Math.max(420,s.period[0],Math.ceil((p.minute+(now%MIN?1:0))/30)*30);start+s.duration<=Math.min(close(p.dow)-30,s.period[1]);start+=30){
+   const t=now+(start-p.minute)*MIN-now%MIN;
+   const values=Array.from({length:s.duration/15+1},(_,i)=>sample(t+i*15*MIN));
+   if(values.some(v=>v===null))continue;
+   const average=(values[0]/2+values.at(-1)/2+values.slice(1,-1).reduce((a,b)=>a+b,0))/(values.length-1);
+   windows.push({start,end:start+s.duration,average:Math.round(average),peak:Math.ceil(Math.max(...values)),source:'forecast'});
+  }
+  return windows;
+ }
+ return {parts,close,recounts,liveContext,historyWindows,todayWindow,quieterLater,thresholdWindows};
 });
