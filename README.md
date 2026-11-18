@@ -4,12 +4,6 @@ I built Climb the Knot to decide whether to head to the gym now or wait for a qu
 
 [Open the live tracker](https://climbtheknot.live/) · [Install the iPhone widget](https://climbtheknot.live/widgets.html)
 
-## Dashboard
-
-- **Now** shows the gym’s reported count, the last likely staff recount, and an estimate of how many people are inside. The `~` identifies the estimate. Its caption explains which data it uses.
-- **Quieter later** highlights a time to go. The chart shows the count so far and the forecast through closing. Use the date picker to see a past day or look ahead.
-- **Weekly trends** shows typical reported crowds by weekday and hour. The session planner uses your preferred session length and crowd limit to suggest when to climb.
-
 ## Architecture
 
 ```mermaid
